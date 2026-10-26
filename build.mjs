@@ -56,7 +56,7 @@ function media(m, extraStyle = '') {
 function rows(list) {
   return list.map((r) => {
     const cls = `row row--${r.kind}${r.mobilePair ? ' row--mpair' : ''}`;
-    const tiles = r.items.map((m) => `<div class="tile" style="aspect-ratio:${r.ar[0]}/${r.ar[1]}">${media(m)}</div>`).join('');
+    const tiles = r.items.map((m) => `<div class="tile" data-appear style="aspect-ratio:${r.ar[0]}/${r.ar[1]}">${media(m)}</div>`).join('');
     return `<div class="${cls}">${tiles}</div>`;
   }).join('\n');
 }
@@ -73,9 +73,9 @@ function nav() {
   <div class="menu__inner">
     <p class="menu__eyebrow">Projects / Case Studies</p>
     <ul class="menu__list">
-${[...projects.map((p) => ({ name: p.menuName, year: p.menuYear, href: `/projects/${p.slug}` })), menuExtra].map((i) => `      <li><a class="menu__row" href="${i.href}"><span class="menu__name">${esc(i.name)}<span class="menu__arrow" aria-hidden="true"><span>→</span></span></span><span class="pill">${esc(i.year)}</span></a></li>`).join('\n')}
+${[...projects.map((p) => ({ name: p.menuName, year: p.menuYear, href: `/projects/${p.slug}` })), menuExtra].map((i, n) => `      <li style="--i:${n}"><a class="menu__row" href="${i.href}"><span class="menu__name">${esc(i.name)}<span class="menu__arrow" aria-hidden="true"><span>→</span></span></span><span class="pill">${esc(i.year)}</span></a></li>`).join('\n')}
     </ul>
-    <ul class="socials">${socials.map((s) => `<li><a href="${s.href}" target="_blank" rel="noopener">${s.label}</a></li>`).join('')}</ul>
+    <ul class="socials">${socials.map((s, n) => `<li style="--i:${n}"><a href="${s.href}" target="_blank" rel="noopener">${s.label}</a></li>`).join('')}</ul>
   </div>
 </div>`;
 }
@@ -89,7 +89,7 @@ const dockProject = (prev, next) => `<nav class="dock" aria-label="Projects"><di
 </div></nav>`;
 
 function intro(i) {
-  return `<section class="intro"><div class="intro__text">
+  return `<section class="intro"><div class="intro__text" data-appear="20">
   ${i.lines.map((l) => `<p>${esc(l)}</p>`).join('\n  ')}
   <p class="intro__sw">Selected Work <span>${esc(i.range)}</span></p>
 </div></section>`;
@@ -108,6 +108,7 @@ function page({ title = site.title, path, body, desc = site.description }) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>document.documentElement.className+=" js";addEventListener("pagereveal",(e)=>{if(e.viewTransition)e.viewTransition.ready.catch(()=>{})})</script>
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(desc)}">
 <link rel="canonical" href="${site.url}${path}">
@@ -130,8 +131,8 @@ ${!PREVIEW && site.gaId ? `<script async src="https://www.googletagmanager.com/g
 <body>
 ${nav()}
 ${body}
-${PREVIEW ? `<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie_light.min.js"></script><script>${JS}</script>` : `<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie_light.min.js" defer></script>
-<script src="/main.js" defer></script>`}
+${PREVIEW ? `<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie_light.min.js"></script><script>${JS}</script>` : `<script src="/main.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie_light.min.js" async></script>`}
 </body>
 </html>
 `;
@@ -157,7 +158,7 @@ out['Projects.html'] = page({
   body: `<main class="projects">
 ${intro(projectsIntro)}
 <div class="cards">
-${projects.map((p) => `<a class="card" href="/projects/${p.slug}">
+${projects.map((p) => `<a class="card" data-appear="20" href="/projects/${p.slug}">
   <div class="card__info"><div><p class="card__name">${esc(p.card.name)}</p><p class="card__sub">${esc(p.card.sub)}</p></div><span class="pill">${esc(p.card.year)}</span></div>
   <div class="card__img">${media(p.card.cover)}</div>
 </a>`).join('\n')}
@@ -173,7 +174,7 @@ projects.forEach((p, i) => {
     path: `/projects/${p.slug}`,
     title: site.title,
     body: `<main class="case">
-<aside class="case__info"><div class="case__sticky">
+<aside class="case__info"><div class="case__sticky" data-appear="30">
   <div class="case__head"><div><h1 class="case__title">${esc(p.title)}</h1><p class="case__sub">${esc(p.subtitle)}</p></div><span class="pill">${esc(p.year)}</span></div>
   <p class="case__desc">${esc(p.description)}</p>
   <dl class="case__meta">${p.meta.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>

@@ -40,6 +40,15 @@
     document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
   });
 
+  // Appear effects: fade + rise once an element enters the viewport (Framer "Appear")
+  const appear = document.querySelectorAll('[data-appear]');
+  if (io && appear.length) {
+    const ao = new IntersectionObserver((entries) => entries.forEach(({ target, isIntersecting }) => {
+      if (isIntersecting) { target.classList.add('is-in'); ao.unobserve(target); }
+    }), { threshold: 0.01 });
+    appear.forEach((el) => ao.observe(el));
+  } else appear.forEach((el) => el.classList.add('is-in'));
+
   // Lottie animations
   const lotties = document.querySelectorAll('[data-lottie]');
   if (lotties.length) {

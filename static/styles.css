@@ -13,7 +13,13 @@
   --dock-ink: #efefef;
   --font: "NM", "Helvetica Neue", Arial, sans-serif;
   --gutter: 8px;
+  --ease-rows: cubic-bezier(.4, 0, .25, 1);      /* menu rows */
+  --ease-tiles: cubic-bezier(.5, .05, .65, .95); /* media tiles scrolling in */
+  --ease-pill: cubic-bezier(.44, 0, .56, 1);     /* dock pill morph */
 }
+
+@keyframes rise { from { opacity: 0; transform: translateY(var(--rise, 10px)); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -49,10 +55,16 @@ img, video { display: block; }
 .menu-btn[aria-expanded="true"] .dots b { left: 5px; top: 5px; width: 2px; height: 2px; opacity: 1; }
 
 /* ---- menu overlay ---------------------------------------------------- */
-.menu { position: fixed; inset: 0; z-index: 9; background: #fff; overflow-y: auto; opacity: 0; transition: opacity .3s ease; }
+.menu { position: fixed; inset: 0; z-index: 9; background: #fff; overflow-y: auto; opacity: 0; transition: opacity .3s linear; }
 .menu[hidden] { display: block; visibility: hidden; pointer-events: none; }
 .menu.is-open { opacity: 1; visibility: visible; }
-.menu__inner { padding: 120px 24px 120px; }
+.menu__inner { padding: 120px 24px 120px; opacity: 0; transition: opacity .25s linear; }
+.menu.is-open .menu__inner { opacity: 1; transition: none; }
+/* open: eyebrow + first row rise 20px, later rows 10px, 100ms apart; chips fade in last (measured from Framer) */
+.menu.is-open .menu__eyebrow { animation: rise .3s var(--ease-rows) .1s both; --rise: 20px; }
+.menu.is-open .menu__list li { animation: rise .3s var(--ease-rows) calc(.2s + var(--i) * .1s) both; }
+.menu.is-open .menu__list li:first-child { --rise: 20px; }
+.menu.is-open .socials li { animation: fade .3s linear calc(.8s + var(--i) * .1s) both; }
 .menu__eyebrow { font-weight: 500; color: var(--muted); margin-bottom: 10px; }
 .menu__list li + li { margin-top: 10px; }
 .menu__row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; }
@@ -114,10 +126,31 @@ img[data-fit="fill"] { object-fit: fill !important; }
 /* ---- bottom dock ----------------------------------------------------- */
 .dock { position: fixed; z-index: 8; left: 50%; bottom: 20px; transform: translateX(-50%); }
 .dock__inner { display: flex; align-items: center; padding: 6px; background: var(--dock); border-radius: 37px; }
-.dock a { display: block; padding: 6px 9px; border-radius: 42px; font-weight: 500; font-size: 12px; line-height: 15.6px; color: var(--dock-ink); white-space: nowrap; transition: background .2s, color .2s; }
+.dock a { display: block; padding: 6px 9px; border-radius: 42px; font-weight: 500; font-size: 12px; line-height: 15.6px; color: var(--dock-ink); white-space: nowrap; transition: opacity .3s; }
+.dock a:not(.is-active):hover { opacity: .8; }
 .dock a.is-active { padding: 6px 12px; background: var(--dock-ink); color: #000; }
 .dock__arrow--prev { padding: 6px 8px 6px 10px !important; }
 .dock__arrow--next { padding: 6px 10px 6px 8px !important; }
+
+/* Feed <-> Projects: the active pill morphs between the two pages (cross-document
+   view transition; browsers without it just swap). Only the pill is captured, the
+   rest of the page swaps hard like Framer does. */
+@view-transition { navigation: auto; }
+html { view-transition-name: none; }
+.dock__inner--tabs .is-active { view-transition-name: dock-pill; }
+::view-transition-group(dock-pill), ::view-transition-old(dock-pill), ::view-transition-new(dock-pill) { animation-duration: .3s; animation-timing-function: var(--ease-pill); }
+
+/* ---- appear effects (Framer "Appear": fade + rise, once, as elements enter view) */
+.js [data-appear] { opacity: 0; transform: translateY(var(--rise, 10px)); }
+.js [data-appear].is-in { opacity: 1; transform: none; transition: opacity var(--dur, .5s) var(--ease, var(--ease-tiles)), transform var(--dur, .5s) var(--ease, var(--ease-tiles)); }
+[data-appear="20"] { --rise: 20px; --ease: ease; }
+[data-appear="30"] { --rise: 30px; --dur: .3s; --ease: ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .js [data-appear] { opacity: 1; transform: none; transition: none; }
+  .menu.is-open .menu__eyebrow, .menu.is-open .menu__list li, .menu.is-open .socials li { animation: none; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}
 
 /* ---- tablet + desktop (Framer breakpoints: 810 / 1200) --------------- */
 @media (min-width: 810px) {
