@@ -1,0 +1,16 @@
+{
+  "name": "nooneswatching-site",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "NO/ONES/WATCHING portfolio, static rebuild of the Framer site",
+  "scripts": {
+    "build": "node build.mjs",
+    "fetch-assets": "node scripts/fetch-assets.mjs",
+    "dev": "node build.mjs && node scripts/serve.mjs",
+    "serve": "node scripts/serve.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
