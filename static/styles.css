@@ -140,6 +140,13 @@ html { view-transition-name: none; }
 .dock__inner--tabs .is-active { view-transition-name: dock-pill; }
 ::view-transition-group(dock-pill), ::view-transition-old(dock-pill), ::view-transition-new(dock-pill) { animation-duration: .3s; animation-timing-function: var(--ease-pill); }
 
+/* ---- smooth scroll (Lenis) ------------------------------------------ */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+.lenis.lenis-smooth iframe { pointer-events: none; }
+
 /* ---- appear effects (Framer "Appear": fade + rise, once, as elements enter view) */
 .js [data-appear] { opacity: 0; transform: translateY(var(--rise, 10px)); }
 .js [data-appear].is-in { opacity: 1; transform: none; transition: opacity var(--dur, .5s) var(--ease, var(--ease-tiles)), transform var(--dur, .5s) var(--ease, var(--ease-tiles)); }

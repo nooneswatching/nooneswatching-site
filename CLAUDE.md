@@ -5,8 +5,9 @@ The first commit (38499e1) is the untouched 1:1 recreation of the Framer site; t
 commit after it adds Framer's animations. A redesign is planned next.
 
 ## Stack
-Plain HTML/CSS/JS. No framework, no npm dependencies. `build.mjs` (~200 lines of
-Node) renders pages from `src/data.mjs` into `dist/`. Node 18+.
+Plain HTML/CSS/JS. No framework, no npm dependencies (Lenis is vendored as a single
+minified file). `build.mjs` (~200 lines of Node) renders pages from `src/data.mjs` into
+`dist/`. Node 18+.
 
 ## Commands
 - `npm run dev`: build, then serve `dist/` at http://localhost:3000 (scripts/serve.mjs,
@@ -49,6 +50,10 @@ Node) renders pages from `src/data.mjs` into `dist/`. Node 18+.
   captured (`html { view-transition-name: none }`), the page itself swaps hard like
   Framer. Firefox (no cross-document VT yet) just swaps. Inactive dock items dim to 80%
   on hover.
+- Smooth scroll: Lenis 1.3.27, vendored at `static/vendor/lenis.min.js` (the same library
+  behind Framer's "Smooth Scroll" setting; Framer ran it at intensity 10, which is
+  `duration: 1`). Initialised at the top of main.js, skipped under `prefers-reduced-motion`.
+  Anything with its own scrollbar needs `data-lenis-prevent` (the menu overlay has it).
 - Appear effects: elements with `data-appear` start at opacity 0 and rise into place once
   main.js sees them enter the viewport (one-shot `is-in`). Default 10px / 500ms
   ease-in-out (feed and case media tiles); `data-appear="20"` is 20px with `ease`

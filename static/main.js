@@ -1,4 +1,9 @@
 (() => {
+  // Smooth scroll: Lenis, the same library behind Framer's "smooth scroll" setting.
+  // Framer runs it with duration = intensity / 10 (default intensity 10).
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (window.Lenis && !reduced) window.lenis = new Lenis({ duration: 1, autoRaf: true });
+
   // Menu overlay
   const btn = document.querySelector('.menu-btn');
   const menu = document.getElementById('menu');

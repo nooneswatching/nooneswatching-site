@@ -69,7 +69,7 @@ function nav() {
   <a class="brand" href="/" aria-label="NO/ONES/WATCHING home"><span class="brand__logo">${logo}</span><span class="brand__word">NO<span>/</span>ONES<span>/</span>WATCHING</span></a>
   <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu"><span class="menu-btn__label" data-open="Close" data-closed="Menu">Menu</span><span class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i><b></b></span></button>
 </header>
-<div class="menu" id="menu" hidden>
+<div class="menu" id="menu" hidden data-lenis-prevent>
   <div class="menu__inner">
     <p class="menu__eyebrow">Projects / Case Studies</p>
     <ul class="menu__list">
@@ -131,7 +131,8 @@ ${!PREVIEW && site.gaId ? `<script async src="https://www.googletagmanager.com/g
 <body>
 ${nav()}
 ${body}
-${PREVIEW ? `<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie_light.min.js"></script><script>${JS}</script>` : `<script src="/main.js" defer></script>
+${PREVIEW ? `<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie_light.min.js"></script><script src="https://cdn.jsdelivr.net/npm/lenis@1.3.27/dist/lenis.min.js"></script><script>${JS}</script>` : `<script src="/vendor/lenis.min.js" defer></script>
+<script src="/main.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie_light.min.js" async></script>`}
 </body>
 </html>
