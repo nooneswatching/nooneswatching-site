@@ -94,6 +94,10 @@ img[data-fit="fill"] { object-fit: fill !important; }
 .kid { position: relative; flex: none; overflow: hidden; }
 .kid > .svg, .kid > .svg svg, .kid > .lottie { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
+/* Feed / Projects live on one page; the dock toggles which grid shows */
+.home:not([data-view="feed"]) .view--feed, .home:not([data-view="projects"]) .view--projects { display: none; }
+.home .view.is-leaving { opacity: 0; transition: opacity .15s linear; }
+
 /* feed slideshow: hard-cut flipbook */
 .slideshow > img { opacity: 0; }
 .slideshow > img.is-active { opacity: 1; }
@@ -101,7 +105,7 @@ img[data-fit="fill"] { object-fit: fill !important; }
 .slideshow.is-running > img:first-child:not(.is-active) { opacity: 0; }
 
 /* ---- projects index -------------------------------------------------- */
-.cards { display: grid; grid-template-columns: 1fr; row-gap: 60px; column-gap: 10px; padding: 0 var(--gutter) var(--gutter); }
+.cards { display: grid; grid-template-columns: 1fr; row-gap: 60px; column-gap: var(--gutter); padding: 0 var(--gutter) var(--gutter); }
 .card { display: block; border-top: 1px solid var(--line); padding-top: 15px; }
 .card__info { height: 39px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .card__name { font-weight: 500; }
@@ -126,19 +130,19 @@ img[data-fit="fill"] { object-fit: fill !important; }
 /* ---- bottom dock ----------------------------------------------------- */
 .dock { position: fixed; z-index: 8; left: 50%; bottom: 20px; transform: translateX(-50%); }
 .dock__inner { display: flex; align-items: center; padding: 6px; background: var(--dock); border-radius: 37px; }
-.dock a { display: block; padding: 6px 9px; border-radius: 42px; font-weight: 500; font-size: 12px; line-height: 15.6px; color: var(--dock-ink); white-space: nowrap; transition: opacity .3s; }
+.dock a { position: relative; z-index: 1; display: block; padding: 6px 9px; border-radius: 42px; font-weight: 500; font-size: 12px; line-height: 15.6px; color: var(--dock-ink); white-space: nowrap; transition: color .3s var(--ease-pill), opacity .3s; }
 .dock a:not(.is-active):hover { opacity: .8; }
 .dock a.is-active { padding: 6px 12px; background: var(--dock-ink); color: #000; }
 .dock__arrow--prev { padding: 6px 8px 6px 10px !important; }
 .dock__arrow--next { padding: 6px 10px 6px 8px !important; }
 
-/* Feed <-> Projects: the active pill morphs between the two pages (cross-document
-   view transition; browsers without it just swap). Only the pill is captured, the
-   rest of the page swaps hard like Framer does. */
-@view-transition { navigation: auto; }
-html { view-transition-name: none; }
-.dock__inner--tabs .is-active { view-transition-name: dock-pill; }
-::view-transition-group(dock-pill), ::view-transition-old(dock-pill), ::view-transition-new(dock-pill) { animation-duration: .3s; animation-timing-function: var(--ease-pill); }
+/* Feed <-> Projects: one pill slides between the tabs (300ms ease-in-out, like Framer's
+   layout animation). main.js measures the active tab and positions it; until then the
+   active tab keeps its own background so nothing flashes. */
+.dock__inner--tabs { position: relative; }
+.dock__pill { position: absolute; z-index: 0; top: 6px; bottom: 6px; left: 0; width: 0; border-radius: 42px; background: var(--dock-ink); opacity: 0; transition: transform .3s var(--ease-pill), width .3s var(--ease-pill); }
+.dock.is-ready .dock__pill { opacity: 1; }
+.dock.is-ready a.is-active { background: transparent; }
 
 /* ---- smooth scroll (Lenis) ------------------------------------------ */
 html.lenis, html.lenis body { height: auto; }
@@ -156,7 +160,7 @@ html.lenis, html.lenis body { height: auto; }
 @media (prefers-reduced-motion: reduce) {
   .js [data-appear] { opacity: 1; transform: none; transition: none; }
   .menu.is-open .menu__eyebrow, .menu.is-open .menu__list li, .menu.is-open .socials li { animation: none; }
-  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+  .dock__pill, .dock a { transition: none; }
 }
 
 /* ---- tablet + desktop (Framer breakpoints: 810 / 1200) --------------- */
@@ -173,6 +177,5 @@ html.lenis, html.lenis body { height: auto; }
 
 @media (min-width: 1200px) {
   .intro { height: 540px; }
-  .row--slideshow { margin-bottom: 10px; }
   .case { grid-template-columns: 320px 1fr; }
 }

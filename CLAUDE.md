@@ -20,9 +20,14 @@ minified file). `build.mjs` (~200 lines of Node) renders pages from `src/data.mj
   Framer's CDN. QA only.
 
 ## Layout
-- `src/data.mjs`: ALL content. Site meta, socials, feed rows, project cards, case studies
-  (order = prev/next order in the dock), menu items. Edit content here, not in templates.
-- `build.mjs`: templates (nav, menu overlay, intro, feed, projects grid, case study, dock).
+- `src/data.mjs`: ALL content. Site meta, socials, the one intro, feed rows, project cards,
+  case studies (order = prev/next order in the dock), menu items. Edit content here, not
+  in templates.
+- `build.mjs`: templates (nav, menu overlay, intro, home with both grids, case study, dock).
+  Feed and Projects are ONE page: `home(view)` renders the intro plus both grids, and
+  `index.html` / `Projects.html` differ only in which grid starts visible (`data-view`)
+  and which dock tab is active. main.js toggles them in place and pushes `/` or
+  `/Projects` into history, so both URLs still work, deep-link and crawl.
 - `static/styles.css`: all styles. `static/main.js`: menu, video autoplay-in-view, feed
   flipbook slideshow (hard cut every 500ms), appear effects, Lottie init (lottie_light
   from cdnjs). main.js is loaded `defer` BEFORE the Lottie script (which is `async`),
@@ -45,11 +50,12 @@ minified file). `build.mjs` (~200 lines of Node) renders pages from `src/data.mj
   row 1 rise 20px, later rows 10px, 300ms, cubic-bezier(.4,0,.25,1)); social chips fade
   in last, 100ms apart from 0.8s. Close: content fades 250ms, overlay 300ms. Stagger index
   is an inline `--i` on each `<li>` from build.mjs; everything else is CSS on `.is-open`.
-- Dock: the active Feed/Projects pill morphs between pages via a cross-document View
-  Transition (`view-transition-name: dock-pill`, 300ms ease-in-out). Only the pill is
-  captured (`html { view-transition-name: none }`), the page itself swaps hard like
-  Framer. Firefox (no cross-document VT yet) just swaps. Inactive dock items dim to 80%
-  on hover.
+- Dock: Feed/Projects toggle swaps the grids in place. The outgoing grid fades 150ms, the
+  incoming one replays its appear effects, and if the reader was scrolled into the old
+  grid they're put at the top of the new one. The highlight is a `.dock__pill` span that
+  main.js measures and slides (300ms ease-in-out); until it's placed the active tab keeps
+  its own background (`.dock.is-ready` flips that). Nav, intro and dock never move.
+  Inactive dock items dim to 80% on hover.
 - Smooth scroll: Lenis 1.3.27, vendored at `static/vendor/lenis.min.js` (the same library
   behind Framer's "Smooth Scroll" setting; Framer ran it at intensity 10, which is
   `duration: 1`). Initialised at the top of main.js, skipped under `prefers-reduced-motion`.
@@ -67,9 +73,10 @@ minified file). `build.mjs` (~200 lines of Node) renders pages from `src/data.mj
 - Colours: ink #3d3d3d, strong #1c1c1c, muted #aeaeae, slash #898989, line #f0f0f0,
   chip #eaeaea, dock #0e0e0e / #efefef.
 - Breakpoints match Framer: phone < 810, tablet 810 to 1199, desktop 1200+.
-  Tablet: intro 480px, case info column 259px. Desktop: intro 540px, info column 320px,
-  extra 10px under the feed slideshow.
-- 8px gutters, 4px tile radius, 10px column gap on the Projects grid.
+  Tablet: intro 480px, case info column 259px. Desktop: intro 540px, info column 320px.
+- 8px gutters everywhere (Framer had 18px under the feed slideshow and a 10px column gap
+  on Projects; Josh unified them to 8px, Oct 2026). 4px tile radius. 60px between Projects
+  card rows is deliberate spacing, not a gutter.
 
 ## URLs (must stay stable, they match the old Framer site)
 `/`, `/Projects` (capital P), `/projects/frame-v4`, `/projects/adidas_boston-marathon`,
@@ -82,8 +89,9 @@ minified file). `build.mjs` (~200 lines of Node) renders pages from `src/data.mj
   scripts/serve.mjs resolves `dist/` with fileURLToPath. If files appear empty or vanish,
   check the folder is set to be available offline.
 - Copy matches Framer exactly, including inconsistencies (e.g. Gotcha is 2021 on the
-  Projects card but 2022 on its page; the home intro says "2016—2025", Projects says
-  "2016—2024"). Don't "fix" these without asking.
+  Projects card but 2022 on its page). Don't "fix" these without asking. The intro was
+  rewritten by Josh in Oct 2026 ("designer & director. Currently at Adobe. 2016 — 2026")
+  and is now shared by Feed and Projects.
 - Google Analytics id lives in `site.gaId` in src/data.mjs.
 
 ## Preferences

@@ -33,7 +33,7 @@ const pair = (a, b, w, h, o = {}) => ({ kind: 'pair', items: [a, b], ar: [w, h],
 
 // ---- home feed -----------------------------------------------------------
 export const feed = {
-  intro: { lines: ['Joshua Newton is a designer & creative director.', 'Brand Studio at Adobe'], range: '2016—2025' },
+  intro: { lines: ['Joshua Newton is a designer & director.', 'Currently at Adobe.'], range: '2016 — 2026' },
   slideshow: ['QGkZ5mXOf1plz0ApqYCWgdWvdnE', 'H0HWFDE0WbVr8ooRhkmg8HMNPY', 'pnQZwwvXazRUzt8ucgQynhRWA', 'kNYfB7NsH5PNVpX0biFudZzUSBU', '49f2KAftqSCCVGB59I63C2Icm8Q'].map((id) => img(id)),
   rows: [
     pair(img('RyYDr22b993wvQDtrVSQ2ZUUwM'), img('rth5S3qyFzyLC2STRyEg8VXv5I'), 1, 1),
@@ -47,7 +47,6 @@ export const feed = {
 };
 
 // ---- projects index ------------------------------------------------------
-export const projectsIntro = { lines: ['Joshua Newton is a designer & creative director.', 'BrandStudio® Frame.io / Adobe'], range: '2016—2024' };
 
 // ---- case studies (order = prev/next order) ------------------------------
 const GREY = 'rgb(188, 187, 187)';

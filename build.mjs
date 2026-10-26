@@ -12,7 +12,7 @@ function copyDir(src, dest) {
     if (statSync(s).isDirectory()) copyDir(s, d); else writeFileSync(d, readFileSync(s));
   }
 }
-import { site, socials, feed, projects, projectsIntro, menuExtra } from './src/data.mjs';
+import { site, socials, feed, projects, menuExtra } from './src/data.mjs';
 
 const PREVIEW = !!process.env.PREVIEW;
 const OUT = PREVIEW ? 'preview' : 'dist';
@@ -81,7 +81,7 @@ ${[...projects.map((p) => ({ name: p.menuName, year: p.menuYear, href: `/project
 }
 
 const dockFeed = (active) => `<nav class="dock" aria-label="Sections"><div class="dock__inner dock__inner--tabs">
-  <a href="/"${active === 'feed' ? ' class="is-active" aria-current="page"' : ''}>Feed</a><a href="/Projects"${active === 'projects' ? ' class="is-active" aria-current="page"' : ''}>Projects</a>
+  <span class="dock__pill" aria-hidden="true"></span><a href="/" data-view="feed"${active === 'feed' ? ' class="is-active" aria-current="page"' : ''}>Feed</a><a href="/Projects" data-view="projects"${active === 'projects' ? ' class="is-active" aria-current="page"' : ''}>Projects</a>
 </div></nav>`;
 
 const dockProject = (prev, next) => `<nav class="dock" aria-label="Projects"><div class="dock__inner dock__inner--project">
@@ -108,7 +108,7 @@ function page({ title = site.title, path, body, desc = site.description }) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script>document.documentElement.className+=" js";addEventListener("pagereveal",(e)=>{if(e.viewTransition)e.viewTransition.ready.catch(()=>{})})</script>
+<script>document.documentElement.className+=" js"</script>
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(desc)}">
 <link rel="canonical" href="${site.url}${path}">
@@ -142,31 +142,26 @@ ${PREVIEW ? `<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12
 // ---- pages ---------------------------------------------------------------
 const out = {};
 
-out['index.html'] = page({
-  path: '/',
-  body: `<main class="feed">
+// Feed and Projects are one page: both grids are in the HTML and the dock toggles
+// which one shows (main.js swaps them in place and updates the URL). Each URL is
+// still built as its own file so direct visits and crawlers get the right grid.
+const home = (view) => `<main class="home" data-view="${view}">
 ${intro(feed.intro)}
-<div class="grid">
-<div class="row row--full row--slideshow"><div class="tile slideshow" style="aspect-ratio:1409/794">${feed.slideshow.map((m, i) => media(m, i ? '' : '')).join('')}</div></div>
+<div class="grid view view--feed">
+<div class="row row--full row--slideshow"><div class="tile slideshow" style="aspect-ratio:1409/794">${feed.slideshow.map((m) => media(m)).join('')}</div></div>
 ${rows(feed.rows)}
 </div>
-</main>
-${dockFeed('feed')}`,
-});
-
-out['Projects.html'] = page({
-  path: '/Projects',
-  body: `<main class="projects">
-${intro(projectsIntro)}
-<div class="cards">
+<div class="cards view view--projects">
 ${projects.map((p) => `<a class="card" data-appear="20" href="/projects/${p.slug}">
   <div class="card__info"><div><p class="card__name">${esc(p.card.name)}</p><p class="card__sub">${esc(p.card.sub)}</p></div><span class="pill">${esc(p.card.year)}</span></div>
   <div class="card__img">${media(p.card.cover)}</div>
 </a>`).join('\n')}
 </div>
 </main>
-${dockFeed('projects')}`,
-});
+${dockFeed(view)}`;
+
+out['index.html'] = page({ path: '/', body: home('feed') });
+out['Projects.html'] = page({ path: '/Projects', body: home('projects') });
 
 projects.forEach((p, i) => {
   const prev = projects[(i - 1 + projects.length) % projects.length];
