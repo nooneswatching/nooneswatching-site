@@ -1,100 +1,71 @@
 # NO/ONES/WATCHING (nooneswatching.me)
 
-Josh Newton's portfolio. Migrated off Framer to a static site hosted on Vercel.
-The first commit (38499e1) is the untouched 1:1 recreation of the Framer site; the
-commit after it adds Framer's animations. A redesign is planned next.
+Josh Newton's portfolio. v3 (Oct 2026) replaced the Framer-era pages with a product-like
+experience: an endless pannable canvas of every piece, filters, an Index view, an Info
+page and one lightbox for single pieces and projects. The design source of truth is the
+Figma file `Portfolio-24` (sKLFi6zl9TqHZSdSCRUzLL), page `Portfolio v3 · Designs`
+(node 958:53). Where Figma and the handoff doc disagree: Figma wins on visuals, the doc
+on behaviour. The v1 code (1:1 Framer rebuild) is in git history before commit "v3:".
 
 ## Stack
-Plain HTML/CSS/JS. No framework, no npm dependencies (Lenis is vendored as a single
-minified file). `build.mjs` (~200 lines of Node) renders pages from `src/data.mjs` into
-`dist/`. Node 18+.
+Plain HTML/CSS/JS. No framework, no npm dependencies (Lenis vendored). `build.mjs`
+renders one shell page per route from `src/work.mjs` + `src/content.mjs` into `dist/`.
+Node 18+. `scripts/media.mjs` needs ffmpeg/ffprobe (local only; outputs are committed).
 
 ## Commands
 - `npm run dev`: build, then serve `dist/` at http://localhost:3000 (scripts/serve.mjs,
-  zero deps, clean URLs, byte ranges for video). Does not watch: rebuild after edits.
-  `.claude/launch.json` has a `dev` entry for the in-app browser preview.
-- `npm run build`: build only. This is what Vercel runs.
-- `npm run fetch-assets`: re-download media from Framer's CDN. Already done, and only
-  works while the Framer site is live. Don't rely on it.
-- `PREVIEW=1 node build.mjs`: single-file pages in `preview/` that load media from
-  Framer's CDN. QA only.
+  mirrors the Vercel routing). Does not watch: rebuild after edits.
+- `npm run build`: build only. What Vercel runs.
+- `npm run media`: after adding media files: thumbnails (640w), video posters and
+  `src/media-manifest.json` (sizes). Idempotent, skips files it already made.
 
 ## Layout
-- `src/data.mjs`: ALL content. Site meta, socials, the one intro, feed rows, project cards,
-  case studies (order = prev/next order in the dock), menu items. Edit content here, not
-  in templates.
-- `build.mjs`: templates (nav, menu overlay, intro, home with both grids, case study, dock).
-  Feed and Projects are ONE page: `home(view)` renders the intro plus both grids, and
-  `index.html` / `Projects.html` differ only in which grid starts visible (`data-view`)
-  and which dock tab is active. main.js toggles them in place and pushes `/` or
-  `/Projects` into history, so both URLs still work, deep-link and crawl.
-- `static/styles.css`: all styles. `static/main.js`: menu, video autoplay-in-view, feed
-  flipbook slideshow (hard cut every 500ms), appear effects, Lottie init (lottie_light
-  from cdnjs). main.js is loaded `defer` BEFORE the Lottie script (which is `async`),
-  otherwise every behaviour waits on the CDN download.
-- `static/assets/{img,video,fonts,lottie}`: self-hosted media, ~164 MB, committed to git.
-  Files are named by their original Framer asset id.
-- `src/svg/`: inline SVGs (e.g. gotcha-icons).
-- `vercel.json`: build command, `dist` output, cleanUrls, /projects -> /Projects redirect,
-  immutable caching for /assets.
+- `src/work.mjs`: ALL work. `projects[]` (ordered; each with `assets` as
+  `[media, title, caption]` and a `cover` id) and `singles[]`. `buildCatalogue()`
+  normalises it. `todo(id, label)` is a placeholder for media Josh still has to supply.
+- `src/content.mjs`: site meta, socials, Info copy (statement, about, experience,
+  recognition, clients). TODO(Josh) comments mark copy still to approve.
+- `build.mjs`: catalogue derivation (canvas order is a round-robin across projects and
+  singles; filters with counts), inline SVG icons, chrome, the three views, the lightbox
+  shell, page template. Embeds the catalogue as JSON in `#data`.
+- `static/main.js`: `Canvas` class (virtualised infinite grid, pan with momentum, hover,
+  in-view video, repopulate animation, FLIP source rects), sheets, filters, view switch,
+  `lb` (lightbox), Index sort/filter/preview, URL state + history.
+- `static/styles.css`: tokens for dark and light, components, `@media (max-width: 809px)`
+  phone layout at the bottom. Figma values are noted inline.
+- `vercel.json`: clean URLs, `/work/:slug/:n` rewrite, redirects from the old URLs.
 
-## Media model (src/data.mjs)
-- Rows: `full(item, w, h)` or `pair(a, b, w, h, { mobilePair })`. w/h are the original
-  design pixels and only set aspect-ratio, so everything scales.
-- Items: `img(id, ext, { fit })`, `vid(id)`, `lottie(id)`, `svg(name)`.
-- `panel(bg, w, h, [kid(item, w, h, radius)], gap)`: coloured tile with centred media.
-  Child sizes are converted to percentages of the panel width.
+## Routes
+`/` grid, `/list` Index (not `/index`: that is `index.html`), `/info`, `/work/<project>`,
+`/work/<project>/<n>`, `/work/<piece>`. Filter is `?f=<id>`. Every route is a real file
+in `dist/` with its own title/OG tags; main.js reads `location` on boot.
 
-## Animations (measured from the Framer site with a MutationObserver, Oct 2026)
-- Menu open: overlay fades 300ms linear; eyebrow + rows rise in 100ms apart (eyebrow and
-  row 1 rise 20px, later rows 10px, 300ms, cubic-bezier(.4,0,.25,1)); social chips fade
-  in last, 100ms apart from 0.8s. Close: content fades 250ms, overlay 300ms. Stagger index
-  is an inline `--i` on each `<li>` from build.mjs; everything else is CSS on `.is-open`.
-- Dock: Feed/Projects toggle swaps the grids in place. The outgoing grid fades 150ms, the
-  incoming one replays its appear effects, and if the reader was scrolled into the old
-  grid they're put at the top of the new one. The highlight is a `.dock__pill` span that
-  main.js measures and slides (300ms ease-in-out); until it's placed the active tab keeps
-  its own background (`.dock.is-ready` flips that). Nav, intro and dock never move.
-  Inactive dock items dim to 80% on hover.
-- Smooth scroll: Lenis 1.3.27, vendored at `static/vendor/lenis.min.js` (the same library
-  behind Framer's "Smooth Scroll" setting; Framer ran it at intensity 10, which is
-  `duration: 1`). Initialised at the top of main.js, skipped under `prefers-reduced-motion`.
-  Anything with its own scrollbar needs `data-lenis-prevent` (the menu overlay has it).
-- Appear effects: elements with `data-appear` start at opacity 0 and rise into place once
-  main.js sees them enter the viewport (one-shot `is-in`). Default 10px / 500ms
-  ease-in-out (feed and case media tiles); `data-appear="20"` is 20px with `ease`
-  (intros, project cards); `data-appear="30"` is 30px / 300ms ease-out (case info
-  column). The `.js` class is added by an inline head script so nothing flashes, and
-  `prefers-reduced-motion` disables all of it.
+## Behaviour that was decided deliberately (don't change without asking)
+- Theme follows the device. No toggle. Edge fades on the canvas only in dark mode.
+- All UI is rounded rectangles, never pills or circles. PP Neue Montreal 400 for
+  everything except the logo wordmark (500).
+- Labels on tiles appear only on hover. No always-on labels, no minimap, no recenter.
+- Filters are mutually exclusive; applying one repopulates the canvas (no dimming).
+  `REPEAT_SMALL_SETS` in main.js is the open question (repeat vs finite canvas).
+- Lightbox: left/right always move through the current filter's grid order. Project
+  assets show the project card (expands downward over the asset, never resizes it) and a
+  filmstrip; singles show title + caption + "From <project> ↗". Controls auto-hide after
+  2s without pointer movement (desktop); tap the asset to toggle them on phones.
+- Mobile sheets expand in place from their corner (filter bottom-left, view bottom-right)
+  and blur everything behind them. The project card becomes the bottom info tray.
+- No em dashes in UI copy. Existing project copy from the old site is unchanged.
 
-## Design values (measured from Framer, keep for the baseline)
-- Font: PP Neue Montreal Regular (400) / Medium (500), self-hosted as family "NM".
-  Check the license covers web self-hosting before relying on it long term.
-- Colours: ink #3d3d3d, strong #1c1c1c, muted #aeaeae, slash #898989, line #f0f0f0,
-  chip #eaeaea, dock #0e0e0e / #efefef.
-- Breakpoints match Framer: phone < 810, tablet 810 to 1199, desktop 1200+.
-  Tablet: intro 480px, case info column 259px. Desktop: intro 540px, info column 320px.
-- 8px gutters everywhere (Framer had 18px under the feed slideshow and a 10px column gap
-  on Projects; Josh unified them to 8px, Oct 2026). 4px tile radius. 60px between Projects
-  card rows is deliberate spacing, not a gutter.
+## Deployment
+Production = `main` = nooneswatching.me. v3 work lives on a dev branch; the project's
+`*.vercel.app` domain should be assigned to that branch in Vercel. Never push or merge
+to `main` or touch domain settings without Josh's explicit go-ahead.
 
-## URLs (must stay stable, they match the old Framer site)
-`/`, `/Projects` (capital P), `/projects/frame-v4`, `/projects/adidas_boston-marathon`,
-`/projects/think-with-google`, `/projects/pixel`, `/projects/gotcha`, `/projects/don-julio`.
-`dist/Projects.html` and `dist/projects/` coexist; macOS is case-insensitive, Vercel is not.
-
-## Gotchas
-- `public/` is a leftover from a failed first build. Ignored; safe to delete.
-- The project lives in Dropbox ("Personal Projects/00_Portfolio"). The path has spaces, so
-  scripts/serve.mjs resolves `dist/` with fileURLToPath. If files appear empty or vanish,
-  check the folder is set to be available offline.
-- Copy matches Framer exactly, including inconsistencies (e.g. Gotcha is 2021 on the
-  Projects card but 2022 on its page). Don't "fix" these without asking. The intro was
-  rewritten by Josh in Oct 2026 ("designer & director. Currently at Adobe. 2016 — 2026")
-  and is now shared by Feed and Projects.
-- Google Analytics id lives in `site.gaId` in src/data.mjs.
-
-## Preferences
-- Josh's writing preference: no em-dashes in new copy (existing Framer copy is unchanged).
-- Josh is a designer who builds high-fidelity prototypes; favour clean, hand-written
-  HTML/CSS over adding frameworks or dependencies unless asked.
+## Design values (from Figma)
+- Backgrounds #0b0b0c / #f3f3f1. Ink white / #111 with 40 to 55% secondary.
+- Glass: rgba(28,28,30,.72) (dock .82, sheets .88 to .9), blur 12 to 24px, 1px border
+  rgba(255,255,255,.08). Light: white .72 to .9, border rgba(17,17,17,.08). Controls over
+  imagery in light mode are clear glass (white .04) with white icons.
+- Radii: sheets 18 (22 phone), docks/buttons 14 to 16, segments/rows 7 to 12, tiles 10
+  (8 phone), lightbox asset 14 (12 phone).
+- Tiles 296×208 gap 20 (168×118 gap 12 on phones), columns staggered by half a row.
+- Breakpoints: phone < 810, tablet 810 to 1199, desktop 1200+.
