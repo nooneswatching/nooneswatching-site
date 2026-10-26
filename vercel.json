@@ -5,13 +5,67 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "redirects": [
-    { "source": "/projects", "destination": "/Projects", "permanent": true },
-    { "source": "/projects/", "destination": "/Projects", "permanent": true }
+    {
+      "source": "/Projects",
+      "destination": "/?f=projects",
+      "permanent": true
+    },
+    {
+      "source": "/projects",
+      "destination": "/?f=projects",
+      "permanent": true
+    },
+    {
+      "source": "/projects/frame-v4",
+      "destination": "/work/frameio-v4-launch",
+      "permanent": true
+    },
+    {
+      "source": "/projects/adidas_boston-marathon",
+      "destination": "/work/boston-marathon",
+      "permanent": true
+    },
+    {
+      "source": "/projects/think-with-google",
+      "destination": "/work/machine-learning-fairness",
+      "permanent": true
+    },
+    {
+      "source": "/projects/pixel",
+      "destination": "/work/pixel-5a",
+      "permanent": true
+    },
+    {
+      "source": "/projects/gotcha",
+      "destination": "/work/gotcha",
+      "permanent": true
+    },
+    {
+      "source": "/projects/don-julio",
+      "destination": "/work/don-julio",
+      "permanent": true
+    },
+    {
+      "source": "/index",
+      "destination": "/list",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/work/:slug/:n(\\d+)",
+      "destination": "/work/:slug"
+    }
   ],
   "headers": [
     {
       "source": "/assets/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
   ]
 }

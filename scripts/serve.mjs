@@ -12,7 +12,14 @@ const TYPES = {
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
   '.webp': 'image/webp', '.gif': 'image/gif', '.mp4': 'video/mp4', '.woff2': 'font/woff2', '.ico': 'image/x-icon',
 };
-const REDIRECTS = { '/projects': '/Projects', '/projects/': '/Projects' };
+// Mirrors vercel.json: old Framer-era URLs and the lightbox deep links.
+const REDIRECTS = {
+  '/Projects': '/?f=projects', '/projects': '/?f=projects', '/projects/': '/?f=projects', '/index': '/list',
+  '/projects/frame-v4': '/work/frameio-v4-launch', '/projects/adidas_boston-marathon': '/work/boston-marathon',
+  '/projects/think-with-google': '/work/machine-learning-fairness', '/projects/pixel': '/work/pixel-5a',
+  '/projects/gotcha': '/work/gotcha', '/projects/don-julio': '/work/don-julio',
+};
+const REWRITES = [[/^\/work\/([^/]+)\/\d+$/, '/work/$1']];
 
 async function resolve(urlPath) {
   const clean = normalize(decodeURIComponent(urlPath)).replace(/^(\.\.[/\\])+/, '');
@@ -24,8 +31,9 @@ async function resolve(urlPath) {
 }
 
 createServer(async (req, res) => {
-  const path = new URL(req.url, 'http://x').pathname;
+  let path = new URL(req.url, 'http://x').pathname;
   if (REDIRECTS[path]) { res.writeHead(308, { Location: REDIRECTS[path] }); return res.end(); }
+  for (const [re, to] of REWRITES) path = path.replace(re, to);
   const file = await resolve(path);
   if (!file) { res.writeHead(404, { 'Content-Type': 'text/plain' }); return res.end(`404: ${path}`); }
   const type = TYPES[extname(file).toLowerCase()] || 'application/octet-stream';
