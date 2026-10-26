@@ -140,6 +140,7 @@ img[data-fit="fill"] { object-fit: fill !important; }
    layout animation). main.js measures the active tab and positions it; until then the
    active tab keeps its own background so nothing flashes. */
 .dock__inner--tabs { position: relative; }
+.dock__inner--tabs a { padding: 6px 12px; } /* same padding in both states so the labels never move; only the pill does */
 .dock__pill { position: absolute; z-index: 0; top: 6px; bottom: 6px; left: 0; width: 0; border-radius: 42px; background: var(--dock-ink); opacity: 0; transition: transform .3s var(--ease-pill), width .3s var(--ease-pill); }
 .dock.is-ready .dock__pill { opacity: 1; }
 .dock.is-ready a.is-active { background: transparent; }
