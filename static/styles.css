@@ -478,7 +478,6 @@ body[data-view="grid"].lenis-stopped, html.lenis body[data-view="grid"] { height
   .lb.is-card-open .lb__dim { opacity: 1; pointer-events: auto; }
   .lb.is-card-open .lb__card { z-index: 2; }
   .lb.is-idle .lb__ui { opacity: 1; }
-  .lb.is-hidden .lb__ui { opacity: 0; pointer-events: none; }
   .lb.is-idle { cursor: auto; }
 }
 

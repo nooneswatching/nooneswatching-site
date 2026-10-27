@@ -50,7 +50,7 @@ in `dist/` with its own title/OG tags; main.js reads `location` on boot.
 - Lightbox: left/right always move through the current filter's grid order. Project
   assets show the project card (expands downward over the asset, never resizes it) and a
   filmstrip; singles show title + caption + "From <project> ↗". Controls auto-hide after
-  2s without pointer movement (desktop); tap the asset to toggle them on phones.
+  2s without pointer movement on desktop only; on phones they never hide.
 - Mobile sheets expand in place from their corner (filter bottom-left, view bottom-right)
   and blur everything behind them. The project card becomes the bottom info tray.
 - No em dashes in UI copy. Existing project copy from the old site is unchanged.

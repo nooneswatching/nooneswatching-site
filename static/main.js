@@ -710,7 +710,6 @@
         body.classList.add('lb-open');
         canvas.pause();
         if (lenis) lenis.stop();
-        el.classList.remove('is-hidden');
         if (!reduced && !tile) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 250, easing: 'ease' });
       }
       render({ fromTile: tile });
@@ -723,7 +722,7 @@
       if (!isOpen()) return;
       const id = cur.id;
       clearTimeout(idleTimer);
-      el.classList.remove('is-idle', 'is-card-open', 'is-hidden');
+      el.classList.remove('is-idle', 'is-card-open');
       state.open = null;
       body.classList.remove('lb-open');
       const tile = state.view === 'grid' ? canvas.tileFor(id) : null;
@@ -804,7 +803,7 @@
       const p = projectById[a.dataset.openProject];
       open(p.assets[0], { project: p.id });
     });
-    // tap the asset on phones to toggle the controls; swipe to navigate
+    // swipe the asset to navigate (controls never hide on phones)
     let sw = null;
     stage.addEventListener('pointerdown', (e) => { sw = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId }; });
     stage.addEventListener('pointerup', (e) => {
@@ -812,10 +811,7 @@
       const dx = e.clientX - sw.x, dy = e.clientY - sw.y, dt = performance.now() - sw.t;
       sw = null;
       if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 600 && e.pointerType === 'touch') { step(dx < 0 ? 1 : -1); return; }
-      if (Math.hypot(dx, dy) < 8 && isPhone()) {
-        if (cur?.cardOpen) { setCard(false); return; }
-        el.classList.toggle('is-hidden');
-      }
+      if (Math.hypot(dx, dy) < 8 && isPhone() && cur?.cardOpen) setCard(false);
     });
     // swipe the tray down to close it
     let ty = null;
