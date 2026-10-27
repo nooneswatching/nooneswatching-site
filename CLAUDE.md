@@ -72,7 +72,9 @@ in `dist/` with its own title/OG tags; main.js reads `location` on boot.
 - No labels on tiles. Hover (desktop) lifts the tile slightly and shows a faint 1px stroke;
   it does not dim the other tiles (that read as blinking). No minimap, no recenter.
 - Filters are mutually exclusive; applying one repopulates the canvas (no dimming).
-  `REPEAT_SMALL_SETS` in main.js is the open question (repeat vs finite canvas).
+  `REPEAT_SMALL_SETS` in main.js is the open question (repeat vs finite canvas). The filter
+  dock exists on the grid only: the Index always lists everything and Info has nothing to
+  filter; a lightbox opened from the Index walks every piece.
 - Lightbox: left/right walk the whole filmstrip first, then move on through the current
   filter's grid order (skipping further tiles of the project just finished) and enter the
   next project at its first asset going forward, its last going backward. Project

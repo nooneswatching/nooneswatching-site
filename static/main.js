@@ -99,6 +99,7 @@
     const prev = state.view;
     const changed = prev !== view;
     state.view = view;
+    if (view !== 'grid' && openSheet === 'filter') closeSheet(true);   // the dock leaves with the grid
     document.querySelectorAll('[data-view-link]').forEach((el) => {
       const on = el.dataset.viewLink === view;
       if (el.classList.contains('seg__item') || el.classList.contains('sheet__row')) {
@@ -543,14 +544,8 @@
     const preview = $('preview'), previewImg = preview.querySelector('img');
     let sort = 'newest';
     rows.forEach((r) => { r.querySelector('.row__client').dataset.disc = r.querySelector('.row__disc').textContent; });
-    const visible = () => {
-      const f = state.filter;
-      return rows.filter((r) => {
-        if (f === 'all') return true;
-        if (f === 'projects') return r.dataset.kind === 'project';
-        return r.dataset.disc.split(',').includes(f);
-      });
-    };
+    // The Index always lists everything: the filter is the grid's, and its dock is not shown here.
+    const visible = () => rows.slice();
     const cmp = {
       newest: (a, b) => b.dataset.year - a.dataset.year || (a.dataset.kind === 'project' ? -1 : 1) - (b.dataset.kind === 'project' ? -1 : 1) || a.dataset.title.localeCompare(b.dataset.title),
       az: (a, b) => a.dataset.title.localeCompare(b.dataset.title),
@@ -579,9 +574,9 @@
           });
         };
       } else reorder();
-      const f = filterById[state.filter];
+      const f = filterById.all;
       const nProjects = vis.filter((r) => r.dataset.kind === 'project').length;
-      $('list-sub').textContent = state.filter === 'projects' ? f.sub : `${f.count} ${f.count === 1 ? 'piece' : 'pieces'} · ${nProjects} ${nProjects === 1 ? 'project' : 'projects'}`;
+      $('list-sub').textContent = `${f.count} ${f.count === 1 ? 'piece' : 'pieces'} · ${nProjects} ${nProjects === 1 ? 'project' : 'projects'}`;
     };
     sortSeg.addEventListener('click', (e) => {
       const b = e.target.closest('[data-sort]');
@@ -647,7 +642,7 @@
     let idleTimer = 0, lastFocus = null, overUi = false, pointerSeen = false;
 
     const isOpen = () => !el.hidden;
-    const navList = () => filterById[state.filter].ids;
+    const navList = () => filterById[state.view === 'grid' ? state.filter : 'all'].ids;   // from the Index, walk everything
 
     // On phones the stage is sized from the real chrome rather than fixed bands: the
     // bottom edge sits just above the count/nav stack, and a picture narrow enough to

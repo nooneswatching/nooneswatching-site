@@ -351,6 +351,8 @@ body[data-nohover] .tile.is-hover { transform: none !important; box-shadow: none
 body[data-squarevideo] .tile:has(video) { border-radius: 0 !important; }
 #diag { position: fixed; left: 8px; top: 8px; z-index: 999; padding: 4px 8px; border-radius: 6px; background: #c00; color: #fff; font: 12px/1.4 monospace; pointer-events: none; }
 .dock, .views { transition: opacity .25s ease; }
+/* the filter belongs to the grid: Index lists everything, Info has nothing to filter */
+body:not([data-view="grid"]) .dock { opacity: 0; pointer-events: none; }
 .lb__stage { position: absolute; inset: 24px; touch-action: pan-y; }
 .lb__asset { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 /* The box is sized to the asset's aspect ratio, so cover == contain once open; during the
