@@ -323,7 +323,10 @@ body[data-view="grid"] .views__icon[data-view-icon="grid"], body[data-view="list
 /* The blur sits on .canvas, the element that also zooms, so the zoom moves one pre-blurred
    texture instead of re-blurring the screen every frame. */
 body.lb-open .canvas, body.lb-open .list, body.lb-open .info { filter: blur(var(--lb-blur, 60px)); }
-.canvas { transition: filter .5s ease-in; }
+/* Open holds the blur back (ease-in) so the box starts flying before the expensive raster lands;
+   close unblurs over the box flight (360ms, decelerating like zoomFlip's quartic ease-out). */
+.canvas, .list, .info { transition: filter .36s cubic-bezier(.25, 1, .5, 1); }
+body.lb-open .canvas, body.lb-open .list, body.lb-open .info { transition: filter .5s ease-in; }
 body.lb-open .dock, body.lb-open .views { opacity: 0; pointer-events: none; }
 body[data-noblur] .canvas, body[data-noblur] .list, body[data-noblur] .info { filter: none !important; }
 #diag { position: fixed; left: 8px; top: 8px; z-index: 999; padding: 4px 8px; border-radius: 6px; background: #c00; color: #fff; font: 12px/1.4 monospace; pointer-events: none; }
