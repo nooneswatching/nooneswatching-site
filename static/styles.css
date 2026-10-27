@@ -324,8 +324,10 @@ body.lb-open .dock, body.lb-open .views { opacity: 0; pointer-events: none; }
 .dock, .views { transition: opacity .25s ease; }
 .lb__stage { position: absolute; inset: 24px; touch-action: pan-y; }
 .lb__asset { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-.lb__media { position: relative; border-radius: var(--r-lb); overflow: hidden; background: var(--tile-bg); transform-origin: top left; }
-.lb__media > img, .lb__media > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+/* The box is sized to the asset's aspect ratio, so cover == contain once open; during the
+   scale the crop morphs from the tile's framing to the full frame. */
+.lb__media { position: absolute; left: 0; top: 0; border-radius: var(--r-lb); overflow: hidden; background: var(--tile-bg); will-change: left, top, width, height; }
+.lb__media > img, .lb__media > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .lb__media[data-fit="contain"] > img, .lb__media[data-fit="contain"] > video { padding: 6%; }
 .lb__media .tile__ph { font-size: 14px; padding: 20px 24px; }
 .lb__scrim { position: absolute; left: 0; right: 0; bottom: 0; height: 160px; border-radius: 0 0 var(--r-lb) var(--r-lb); background: linear-gradient(to top, var(--lb-scrim), transparent); pointer-events: none; opacity: 0; }

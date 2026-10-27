@@ -595,20 +595,47 @@
       const sw = stage.clientWidth, sh = stage.clientHeight;
       let w = sw, h = w / r;
       if (h > sh) { h = sh; w = h * r; }
-      if (isPhone() && m.type !== 'placeholder') { /* keep side margins; height follows */ }
-      media.style.width = `${Math.round(w)}px`; media.style.height = `${Math.round(h)}px`;
+      w = Math.round(w); h = Math.round(h);
+      media._rest = { left: Math.round((sw - w) / 2), top: Math.round((sh - h) / 2), width: w, height: h };
+      if (!media._flipping) place(media, media._rest);
     }
+    const place = (box, r) => { box.style.left = `${r.left}px`; box.style.top = `${r.top}px`; box.style.width = `${r.width}px`; box.style.height = `${r.height}px`; };
 
-    function buildMedia(a) {
+    // The lightbox shows the very same pixels the tile shows, so the scale up and down is
+    // one continuous object: images start from the tile's thumbnail and upgrade to the full
+    // file once it has decoded; a playing tile video is adopted mid-play and handed back.
+    function buildMedia(a, tile = null) {
       const m = a.media;
       const box = document.createElement('div');
       box.className = 'lb__media';
       if (m.bg) box.style.background = m.bg;
       if (m.fit === 'contain') box.dataset.fit = 'contain';
       if (m.type === 'placeholder') box.innerHTML = `<span class="tile__ph">${esc(m.label || a.title)}</span>`;
-      else if (m.type === 'video') box.innerHTML = `<video src="${m.src}" poster="${m.poster}" muted loop playsinline autoplay preload="auto"></video>`;
-      else box.innerHTML = `<img src="${m.src}" alt="${esc(a.title)}" decoding="async">`;
+      else if (m.type === 'video') {
+        const tv = tile && tile.querySelector('video');
+        if (tv) { box.appendChild(tv); box._adopted = { video: tv, id: a.id }; const pl = tv.play(); if (pl && pl.catch) pl.catch(() => {}); } // reparenting pauses it
+        else box.innerHTML = `<video src="${m.src}" poster="${m.thumb || m.poster}" muted loop playsinline autoplay preload="auto"></video>`;
+      } else {
+        const img = document.createElement('img');
+        img.alt = a.title; img.decoding = 'async';
+        img.src = m.thumb || m.src;
+        box.appendChild(img);
+        if (m.thumb && m.src !== m.thumb) {
+          const hi = new Image();
+          hi.src = m.src;
+          (hi.decode ? hi.decode() : Promise.resolve()).then(() => { if (img.isConnected) img.src = m.src; }).catch(() => {});
+        }
+      }
       return box;
+    }
+    // give an adopted video back to a tile showing the same piece, so the grid keeps playing
+    function returnVideo(box) {
+      const ad = box && box._adopted;
+      if (!ad) return;
+      box._adopted = null;
+      const tile = state.view === 'grid' ? canvas.tileFor(ad.id) : null;
+      if (tile && !tile.querySelector('video')) { tile.appendChild(ad.video); const pl = ad.video.play(); if (pl && pl.catch) pl.catch(() => {}); }
+      else { ad.video.pause(); ad.video.removeAttribute('src'); ad.video.load(); ad.video.remove(); }
     }
 
     function render({ fromTile = null } = {}) {
@@ -644,10 +671,11 @@
       } else { strip.hidden = true; thumbs.innerHTML = ''; countEl.textContent = ''; }
       // media
       const old = media;
-      media = buildMedia(a);
+      media = buildMedia(a, fromTile);
       assetEl.appendChild(media);
       sizeMedia();
       if (old) {
+        returnVideo(old);
         if (!reduced) { old.style.transition = 'opacity .2s ease'; old.style.opacity = '0'; setTimeout(() => old.remove(), 200); } else old.remove();
       }
       if (fromTile && !reduced) flipIn(fromTile);
@@ -662,27 +690,32 @@
     function zoomFlip(tile, opening, done) {
       cancelAnimationFrame(flipRaf);
       const Z = isPhone() ? ZOOM_PHONE : ZOOM;
-      const rest = canvas.restRect(tile);                       // tile at zoom 1
-      const full = (() => { const t = media.style.transform; media.style.transform = ''; const r = media.getBoundingClientRect(); media.style.transform = t; return r; })();
+      const rest = canvas.restRect(tile);                       // tile at zoom 1 (viewport)
+      const sr = stage.getBoundingClientRect();
+      const full = media._rest;                                  // open rect (stage coords)
       const ox = rest.left + rest.width / 2, oy = rest.top + rest.height / 2;
-      const radius = parseFloat(getComputedStyle(tile).borderRadius) || 8;
-      const fullRadius = parseFloat(getComputedStyle(media).borderRadius) || 14;
+      const r0 = parseFloat(getComputedStyle(tile).borderRadius) || 8;
+      const r1 = parseFloat(getComputedStyle(media).borderRadius) || 14;
       const duration = opening ? 420 : 360;
+      const box = media;
+      box._flipping = true;
       const t0 = performance.now();
       const frame = (now) => {
         const p = Math.min(1, Math.max(0, (now - t0) / duration));
         const e = easeOut(p);
-        const k = opening ? e : 1 - e;                          // 0 = at rest in the grid, 1 = open
+        const k = opening ? e : 1 - e;                          // 0 = in the grid, 1 = open
         const z = 1 + (Z - 1) * k;
         canvas.setZoom(ox, oy, z);
-        // where the tile is right now, zoom included
-        const tl = ox + (rest.left - ox) * z, tt = oy + (rest.top - oy) * z, tw = rest.width * z, th = rest.height * z;
-        const left = tl + (full.left - tl) * k, top = tt + (full.top - tt) * k, w = tw + (full.width - tw) * k, h = th + (full.height - th) * k;
-        const sx = w / full.width, sy = h / full.height;
-        media.style.transform = `translate(${(left - full.left).toFixed(2)}px, ${(top - full.top).toFixed(2)}px) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`;
-        media.style.borderRadius = `${((radius + (fullRadius - radius) * k) / sx).toFixed(2)}px / ${((radius + (fullRadius - radius) * k) / sy).toFixed(2)}px`;
+        // where the tile is right now, zoom included (stage coords)
+        const tl = ox + (rest.left - ox) * z - sr.left, tt = oy + (rest.top - oy) * z - sr.top, tw = rest.width * z, th = rest.height * z;
+        place(box, { left: tl + (full.left - tl) * k, top: tt + (full.top - tt) * k, width: tw + (full.width - tw) * k, height: th + (full.height - th) * k });
+        box.style.borderRadius = `${(r0 + (r1 - r0) * k).toFixed(2)}px`;
         if (p < 1) flipRaf = requestAnimationFrame(frame);
-        else { if (opening) { media.style.transform = ''; media.style.borderRadius = ''; } else canvas.release(); if (done) done(); }
+        else {
+          box._flipping = false;
+          if (opening) { box.style.borderRadius = ''; place(box, box._rest); } else canvas.release();
+          if (done) done();
+        }
       };
       frame(t0);
     }
@@ -750,7 +783,7 @@
       if (!tile || reduced) canvas.release();
       const finish = () => {
         el.hidden = true;
-        if (media) { media.remove(); media = null; }
+        if (media) { returnVideo(media); media.remove(); media = null; }
         [ui, el.querySelector('.lb__bg')].forEach((x) => x.getAnimations().forEach((a) => a.cancel()));
         if (state.view === 'grid') canvas.resume(); else if (lenis) lenis.start();
         if (lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true }); else $('canvas').focus({ preventScroll: true });
@@ -759,7 +792,6 @@
         ui.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: 'forwards' });
         el.querySelector('.lb__bg').animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' });
         zoomFlip(tile, false, finish);
-        canvas.resume();
       } else if (!reduced) {
         el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'ease' }).onfinish = finish;
       } else finish();
