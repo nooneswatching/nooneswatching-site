@@ -325,15 +325,13 @@ body.lb-open .dock, body.lb-open .views { opacity: 0; pointer-events: none; }
 .lb__asset { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 /* The box is sized to the asset's aspect ratio, so cover == contain once open; during the
    scale the crop morphs from the tile's framing to the full frame. */
-.lb__media { position: absolute; left: 0; top: 0; border-radius: var(--r-lb); overflow: hidden; background: var(--tile-bg); will-change: left, top, width, height; }
+.lb__media { position: absolute; left: 0; top: 0; border-radius: var(--r-lb); overflow: hidden; }
 .lb__media > img, .lb__media > video, .lb__media > .lb__layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .lb__layer > img, .lb__layer > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: inherit; }
 .lb__layer > video { opacity: 0; transition: opacity .25s ease; }
 .lb__layer.is-ready > video { opacity: 1; }
 /* only while the box is in flight (open/close) does the picture fill it edge to edge */
 .lb__media.is-flipping > img, .lb__media.is-flipping > video, .lb__media.is-flipping > .lb__layer { object-fit: cover; }
-/* while the box morphs between pieces, each picture keeps its own size, centred */
-.lb__media > .is-fixed { inset: auto; left: 50%; top: 50%; transform: translate(-50%, -50%); }
 .lb__media .tile__ph { font-size: 14px; padding: 20px 24px; }
 .lb__scrim { position: absolute; left: 0; right: 0; bottom: 0; height: 160px; border-radius: 0 0 var(--r-lb) var(--r-lb); background: linear-gradient(to top, var(--lb-scrim), transparent); pointer-events: none; opacity: 0; }
 .lb.has-strip .lb__scrim { opacity: 1; }

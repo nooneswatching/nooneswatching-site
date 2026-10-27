@@ -658,7 +658,7 @@
         const layer = document.createElement('div');
         layer.className = 'lb__layer';
         const still = document.createElement('img');
-        still.alt = ''; still.decoding = 'async'; still.src = m.thumb || m.poster;
+        still.alt = ''; still.decoding = 'sync'; still.src = m.thumb || m.poster;
         const v = document.createElement('video');
         v.src = m.src; v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true; v.preload = 'auto'; v.setAttribute('muted', '');
         v.addEventListener('loadeddata', () => { layer.classList.add('is-ready'); setTimeout(() => still.remove(), 400); }, { once: true });
@@ -666,7 +666,7 @@
         return layer;
       }
       const img = document.createElement('img');
-      img.alt = a.title; img.decoding = 'async';
+      img.alt = a.title; img.decoding = 'sync';      // the cached thumbnail paints at once
       img.src = m.thumb || m.src;
       if (m.thumb && m.src !== m.thumb) {
         const hi = new Image();
@@ -709,6 +709,7 @@
         setCard(false, false);
       }
       // filmstrip + count
+      const hadThumbFocus = document.activeElement && document.activeElement.classList.contains('lb__thumb');
       if (p) {
         thumbs.innerHTML = p.assets.map((id, i) => {
           const x = assets[id];
@@ -718,26 +719,32 @@
         countEl.textContent = `${p.assets.indexOf(cur.id) + 1} / ${p.assets.length}`;
         const active = thumbs.querySelector('.is-active');
         if (active) requestAnimationFrame(() => active.scrollIntoView({ block: 'nearest', inline: 'center', behavior: reduced ? 'auto' : 'smooth' }));
+        // rebuilding the strip drops a focused thumb; keep the keys working
+        if (hadThumbFocus && active) active.focus({ preventScroll: true });
       } else { strip.hidden = true; thumbs.innerHTML = ''; countEl.textContent = ''; }
+      if (isOpen() && !el.contains(document.activeElement)) el.focus({ preventScroll: true });
       // media: the same box stays and morphs to the next piece's shape while the picture
       // crossfades inside it, so moving between pieces reads as one object changing
       if (media && !fromTile) {
-        // Switching pieces: the box takes the new size at once, no resize animation; the
-        // next picture fades in over the previous one, each at its own size.
-        const box = media;
-        const prev = [...box.children];
-        const layer = buildLayer(a);
-        box.appendChild(layer);
-        box.style.background = a.media.bg || '';
-        const br = box.getBoundingClientRect(), sr = stage.getBoundingClientRect();
-        const was = { width: br.width, height: br.height };
-        box.getAnimations().forEach((x) => x.cancel());
-        box._flipping = false;
+        // Switching pieces: a new box, sized for the next piece from its first frame, fades
+        // in over the old one, which keeps its own size until it is gone. Boxes are never
+        // resized in place: iOS keeps a stale clip on a resized box for several frames.
+        const olds = [...assetEl.children];
+        const nb = buildMedia(a);
+        media = nb;
+        assetEl.appendChild(nb);
         sizeMedia();
+        const drop = () => olds.forEach((o) => { if (o.isConnected) { returnVideo(o); o.remove(); } });
         if (!reduced) {
-          prev.forEach((l) => { if (!l.classList.contains('is-fixed')) { l.classList.add('is-fixed'); l.style.width = `${was.width}px`; l.style.height = `${was.height}px`; } });
-          layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: 'ease' }).onfinish = () => prev.forEach((l) => { returnVideo(l); l.remove(); });
-        } else prev.forEach((l) => { returnVideo(l); l.remove(); });
+          olds.forEach((o) => {
+            o._flipping = false;
+            if (o._out) return;                                   // already fading out
+            if (o._in) o._in.cancel();
+            o._out = o.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 240, easing: 'ease-in', fill: 'forwards' });
+          });
+          nb._in = nb.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: 'ease' });
+          nb._in.onfinish = () => { nb._in = null; drop(); };
+        } else drop();
       } else {
         const old = media;
         media = buildMedia(a, fromTile);
@@ -770,9 +777,12 @@
       const duration = opening ? 420 : 360;
       const box = media;
       box._flipping = true; box.classList.add('is-flipping');
-      const t0 = performance.now();
+      // the clock advances at most 50ms per frame: a raster stall (the blur on phones) then
+      // delays the zoom instead of swallowing its first half
+      let last = performance.now(), t = 0;
       const frame = (now) => {
-        const p = Math.min(1, Math.max(0, (now - t0) / duration));
+        t += Math.min(50, Math.max(0, now - last)); last = now;
+        const p = Math.min(1, t / duration);
         const e = easeOut(p);
         const k = opening ? e : 1 - e;                          // 0 = in the grid, 1 = open
         const z = 1 + (Z - 1) * k;
@@ -788,7 +798,7 @@
           if (done) done();
         }
       };
-      frame(t0);
+      frame(last);
     }
 
     function flipIn(tile) {
@@ -832,7 +842,10 @@
         if (!tile) canvas.release();
         lastFocus = document.activeElement;
         el.hidden = false;
-        body.classList.add('lb-open');
+        // the blur behind the lightbox is the expensive raster; let the first zoom frame
+        // paint before it lands
+        if (tile && !reduced) requestAnimationFrame(() => requestAnimationFrame(() => { if (isOpen()) body.classList.add('lb-open'); }));
+        else body.classList.add('lb-open');
         canvas.pause();
         if (lenis) lenis.stop();
         if (!reduced && !tile) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 250, easing: 'ease' });
@@ -854,9 +867,11 @@
       body.classList.remove('lb-open');
       const tile = state.view === 'grid' ? canvas.tileFor(id) : null;
       if (!tile || reduced) canvas.release();
+      // a box still fading out from the last switch goes now; only the current one flies back
+      [...assetEl.children].forEach((o) => { if (o !== media) { o.getAnimations().forEach((x) => x.cancel()); returnVideo(o); o.remove(); } });
       const finish = () => {
         el.hidden = true;
-        if (media) { returnVideo(media); media.remove(); media = null; }
+        [...assetEl.children].forEach((o) => { returnVideo(o); o.remove(); }); media = null;
         [ui, el.querySelector('.lb__bg')].forEach((x) => x.getAnimations().forEach((a) => a.cancel()));
         if (state.view === 'grid') canvas.resume(); else if (lenis) lenis.start();
         if (lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true }); else $('canvas').focus({ preventScroll: true });
@@ -977,7 +992,14 @@
   // ---- global keys ----------------------------------------------------------------
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && openSheet) { closeSheet(); return; }
-    if (lb.isOpen()) return;
+    if (lb.isOpen()) {
+      // focus outside the dialog (it handles its own keys when focused)
+      if ($('lb').contains(e.target)) return;
+      if (e.key === 'Escape') { e.preventDefault(); lb.close(); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); lb.step(-1); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); lb.step(1); }
+      return;
+    }
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { /* canvas handles when focused */ }
   });
 
