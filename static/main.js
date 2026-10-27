@@ -12,8 +12,8 @@
   // Open question from the brief: when a filtered set is small, keep tiling it
   // infinitely (true) or show a finite, centred canvas (false).
   const REPEAT_SMALL_SETS = true;
-  // How far neighbouring tiles get pushed when a tile opens (px, before distance falloff).
-  const PUSH = 90, PUSH_PHONE = 56;
+  // How much the canvas zooms in around a tile while it opens into the lightbox.
+  const ZOOM = 1.5, ZOOM_PHONE = 1.35;
 
   const body = document.body;
   const $ = (id) => document.getElementById(id);
@@ -463,31 +463,30 @@
     }
     pause() { this.paused = true; this.pauseVideos(); }
     resume() { if (!this.paused) return; this.paused = false; this.metrics(); this.dirty = true; }
-    // Neighbours get nudged away from the tile that opens (strongest close by, fading
-    // with distance, slight overshoot) and settle back when the lightbox closes.
+    // The canvas zooms in around the tile that opens (like the reference moodboard app):
+    // neighbours fly outward, faster the farther they are, and settle back on close.
     push(source) {
       if (reduced || !source) return;
-      const sr = source.getBoundingClientRect();
-      const sx = sr.left + sr.width / 2, sy = sr.top + sr.height / 2;
-      const max = isPhone() ? PUSH_PHONE : PUSH;
-      const reach = Math.max(this.vw, this.vh) * 0.55;
-      this.pushed = [];
-      for (const el of this.tiles.values()) {
-        if (el === source) continue;
-        const r = el.getBoundingClientRect();
-        const dx = r.left + r.width / 2 - sx, dy = r.top + r.height / 2 - sy;
-        const d = Math.hypot(dx, dy) || 1;
-        const k = max * Math.exp(-d / reach);
-        el.style.transition = 'transform .6s cubic-bezier(.2, .9, .25, 1.08)';
-        el.style.transform = `translate(${(dx / d * k).toFixed(1)}px, ${(dy / d * k).toFixed(1)}px)`;
-        this.pushed.push(el);
-      }
+      const r = source.getBoundingClientRect();
+      const ox = r.left + r.width / 2, oy = r.top + r.height / 2;
+      this.zoom = { ox, oy, s: isPhone() ? ZOOM_PHONE : ZOOM };
+      this.root.style.transformOrigin = `${ox}px ${oy}px`;
+      this.root.style.transition = 'transform .5s cubic-bezier(.22, 1, .36, 1)';
+      this.root.style.transform = `scale(${this.zoom.s})`;
     }
     release() {
-      if (!this.pushed) return;
-      const els = this.pushed; this.pushed = null;
-      els.forEach((el) => { el.style.transition = 'transform .5s cubic-bezier(.22, 1, .36, 1)'; el.style.transform = ''; });
-      setTimeout(() => els.forEach((el) => { if (!el.style.transform) el.style.transition = ''; }), 550);
+      if (!this.zoom) return;
+      this.zoom = null;
+      this.root.style.transition = 'transform .45s cubic-bezier(.22, 1, .36, 1)';
+      this.root.style.transform = '';
+      setTimeout(() => { if (!this.zoom) { this.root.style.transition = ''; this.root.style.transformOrigin = ''; } }, 500);
+    }
+    // a tile's rect as it will be once the zoom is released (FLIP target on close)
+    restRect(el) {
+      const r = el.getBoundingClientRect();
+      if (!this.zoom) return r;
+      const { ox, oy, s } = this.zoom;
+      return { left: ox + (r.left - ox) / s, top: oy + (r.top - oy) / s, width: r.width / s, height: r.height / s };
     }
     tileFor(id) {
       // the on-screen tile closest to the centre for this asset (for FLIP)
@@ -673,6 +672,8 @@
         { transform: 'none', borderRadius: '' },
       ], { duration: 380, easing: 'cubic-bezier(.22,1,.36,1)' });
       ui.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, delay: 120, easing: 'ease', fill: 'backwards' });
+      // the dim ramps in with the zoom so the neighbours are seen flying outward
+      el.querySelector('.lb__bg').animate([{ opacity: 0 }, { opacity: 1 }], { duration: 420, easing: 'ease-in' });
     }
 
     function setCard(open, animate = true) {
@@ -725,6 +726,8 @@
       el.classList.remove('is-idle', 'is-card-open', 'is-hidden');
       state.open = null;
       body.classList.remove('lb-open');
+      const tile = state.view === 'grid' ? canvas.tileFor(id) : null;
+      const to = tile ? canvas.restRect(tile) : null;
       canvas.release();
       const finish = () => {
         el.hidden = true;
@@ -732,9 +735,8 @@
         if (state.view === 'grid') canvas.resume(); else if (lenis) lenis.start();
         if (lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true }); else $('canvas').focus({ preventScroll: true });
       };
-      const tile = state.view === 'grid' ? canvas.tileFor(id) : null;
       if (tile && !reduced && media) {
-        const from = media.getBoundingClientRect(), to = tile.getBoundingClientRect();
+        const from = media.getBoundingClientRect();
         const sx = to.width / from.width, sy = to.height / from.height;
         ui.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: 'forwards' });
         el.querySelector('.lb__bg').animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' });
