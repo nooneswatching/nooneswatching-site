@@ -743,7 +743,7 @@
       const r1 = parseFloat(getComputedStyle(media).borderRadius) || 14;
       const duration = opening ? 420 : 360;
       const box = media;
-      box._flipping = true;
+      box._flipping = true; box.classList.add('is-flipping');
       const t0 = performance.now();
       const frame = (now) => {
         const p = Math.min(1, Math.max(0, (now - t0) / duration));
@@ -757,7 +757,7 @@
         box.style.borderRadius = `${(r0 + (r1 - r0) * k).toFixed(2)}px`;
         if (p < 1) flipRaf = requestAnimationFrame(frame);
         else {
-          box._flipping = false;
+          box._flipping = false; box.classList.remove('is-flipping');
           if (opening) { box.style.borderRadius = ''; place(box, box._rest); } else canvas.release();
           if (done) done();
         }
