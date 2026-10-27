@@ -638,9 +638,17 @@
       if (m.type === 'video') {
         const tv = tile && tile.querySelector('video');
         if (tv) { tv._adoptedId = a.id; const pl = tv.play(); if (pl && pl.catch) pl.catch(() => {}); return tv; } // reparenting pauses it
+        // A fresh clip paints nothing on iOS until it has loaded (or paints its poster at the
+        // wrong size), so the layer shows the thumbnail at once and fades the clip in over it.
+        const layer = document.createElement('div');
+        layer.className = 'lb__layer';
+        const still = document.createElement('img');
+        still.alt = ''; still.decoding = 'async'; still.src = m.thumb || m.poster;
         const v = document.createElement('video');
-        v.src = m.src; v.poster = m.thumb || m.poster; v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true; v.preload = 'auto'; v.setAttribute('muted', '');
-        return v;
+        v.src = m.src; v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true; v.preload = 'auto'; v.setAttribute('muted', '');
+        v.addEventListener('loadeddata', () => { layer.classList.add('is-ready'); setTimeout(() => still.remove(), 400); }, { once: true });
+        layer.append(still, v);
+        return layer;
       }
       const img = document.createElement('img');
       img.alt = a.title; img.decoding = 'async';
