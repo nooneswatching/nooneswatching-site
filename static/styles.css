@@ -188,7 +188,6 @@ body.lb-open .canvas .tile:not(.is-hover) { opacity: .5; }
 .tile__chip { padding: 4px 8px; border-radius: 7px; background: rgba(255, 255, 255, .14); font-size: 11px; }
 @media (prefers-color-scheme: light) { .tile__label { background: rgba(255, 255, 255, .85); color: #111; } .tile__chip { background: rgba(17, 17, 17, .14); } }
 @media (hover: hover) and (min-width: 810px) {
-  .canvas.has-hover .tile:not(.is-hover) { opacity: .55; }
   .tile.is-hover { z-index: 2; transform: scale(1.04); box-shadow: 0 24px 60px rgba(0, 0, 0, .45); }
   .tile.is-hover::after, .tile.is-hover .tile__label { opacity: 1; }
   .tile.is-hover .tile__label { transform: none; }
