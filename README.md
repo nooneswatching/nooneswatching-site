@@ -60,7 +60,7 @@ Everything is in `src/work.mjs`.
 - `media` is `img(id, ext)`, `vid(id)` or `todo(id, label)` for a file you still have
   to supply (renders as a labelled placeholder tile). Files live in
   `static/assets/img/<id>.<ext>` and `static/assets/video/<id>.mp4`.
-- `bg` and `fit: 'contain'` on a media item reproduce the old coloured panels.
+- `bg` on a media item is a backing colour for PNGs with transparency, nothing else.
 - Disciplines are `brand`, `product`, `campaign`, `motion`, `web`.
 
 Then `npm run media` (if you added files) and `npm run build`. Counts, filters, the

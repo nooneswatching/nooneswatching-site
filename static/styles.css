@@ -177,7 +177,6 @@ body.lb-open .canvas .tile:not(.is-hover) { opacity: .5; }
 .canvas__layer { position: absolute; left: 0; top: 0; will-change: transform; }
 .tile { position: absolute; left: 0; top: 0; width: var(--tw); height: var(--th); border-radius: var(--r-tile); overflow: hidden; background: var(--tile-bg); color: var(--ink); transform-origin: center; -webkit-user-drag: none; transition: transform .3s var(--ease-out), opacity .3s ease, box-shadow .3s ease; }
 .tile > img, .tile > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; -webkit-user-drag: none; }
-.tile[data-fit="contain"] > img, .tile[data-fit="contain"] > video { object-fit: contain; padding: 8%; }
 .tile::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1.5px #fff; opacity: 0; transition: opacity .3s ease; pointer-events: none; }
 .tile__ph { position: absolute; inset: 0; display: flex; align-items: flex-end; padding: 12px 14px; font-size: 12px; color: var(--ink-40); background: repeating-linear-gradient(135deg, transparent 0 10px, var(--tile-bg) 10px 11px); }
 .tile__label { position: absolute; left: 8px; bottom: 8px; display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; border-radius: 10px; background: rgba(28, 28, 30, .85); color: #fff; font-size: 13px; white-space: nowrap; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); opacity: 0; transform: translateY(4px); transition: opacity .2s ease, transform .2s ease; pointer-events: none; }
@@ -328,7 +327,6 @@ body.lb-open .dock, body.lb-open .views { opacity: 0; pointer-events: none; }
    scale the crop morphs from the tile's framing to the full frame. */
 .lb__media { position: absolute; left: 0; top: 0; border-radius: var(--r-lb); overflow: hidden; background: var(--tile-bg); will-change: left, top, width, height; }
 .lb__media > img, .lb__media > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.lb__media[data-fit="contain"] > img, .lb__media[data-fit="contain"] > video { padding: 6%; }
 .lb__media .tile__ph { font-size: 14px; padding: 20px 24px; }
 .lb__scrim { position: absolute; left: 0; right: 0; bottom: 0; height: 160px; border-radius: 0 0 var(--r-lb) var(--r-lb); background: linear-gradient(to top, var(--lb-scrim), transparent); pointer-events: none; opacity: 0; }
 .lb.has-strip .lb__scrim { opacity: 1; }

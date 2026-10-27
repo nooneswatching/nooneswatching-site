@@ -184,8 +184,8 @@
     };
     if (changed && animate && !reduced) {
       const parts = dockBtn.querySelectorAll('.dock__thumb, .dock__text');
-      parts.forEach((el) => el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' }));
-      setTimeout(() => { swapDock(); parts.forEach((el) => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' })); }, 120);
+      const outs = [...parts].map((el) => el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' }));
+      setTimeout(() => { outs.forEach((a) => a.cancel()); swapDock(); parts.forEach((el) => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' })); }, 120);
     } else swapDock();
     filterSheet.querySelectorAll('.sheet__row').forEach((row) => {
       const on = row.dataset.filter === f.id;
@@ -230,30 +230,55 @@
     metrics() {
       const cs = getComputedStyle(document.documentElement);
       this.w = parseFloat(cs.getPropertyValue('--tw')); this.h = parseFloat(cs.getPropertyValue('--th')); this.g = parseFloat(cs.getPropertyValue('--tg'));
-      this.cw = this.w + this.g; this.rh = this.h + this.g;
+      this.cw = this.w + this.g;
       this.vw = this.root.clientWidth; this.vh = this.root.clientHeight;
     }
     // Block of C columns x R rows that repeats in both directions. C is even so the
     // half-row stagger lines up across repeats.
+    // Masonry: fixed column width, every tile at its asset's natural aspect ratio, each
+    // piece dropped into the shortest column. Each column then repeats vertically with its
+    // own period, and the block of C columns repeats sideways (shifted so no two
+    // neighbouring blocks line up), which keeps the canvas endless in both directions.
+    heightOf(id) {
+      const m = assets[id].media;
+      const r = m.width && m.height ? m.width / m.height : 4 / 3;
+      return Math.round(clamp(this.w / r, this.w * 0.5, this.w * 1.6));
+    }
     plan() {
       const n = this.ids.length;
-      if (!n) { this.C = 2; this.R = 1; return; }
-      let C = Math.ceil(Math.sqrt(n * this.rh / this.cw));
-      if (C % 2) C++;
-      C = Math.max(2, C);
-      this.C = C; this.R = Math.max(1, Math.ceil(n / C));
+      this.cols = []; this.C = 1; this.h = this.w * 0.7;
+      if (!n) return;
+      const hs = this.ids.map((id) => this.heightOf(id));
+      const avg = hs.reduce((a, b) => a + b, 0) / n + this.g;
       this.finite = !REPEAT_SMALL_SETS && n < 24;
+      // roughly square block of columns
+      const C = Math.max(2, Math.round(Math.sqrt(n * avg / this.cw)));
+      this.C = C;
+      const cols = Array.from({ length: C }, () => ({ items: [], y: 0 }));
+      this.ids.forEach((id, i) => {
+        let c = cols[0];
+        for (const x of cols) if (x.y < c.y) c = x;
+        c.items.push({ id, h: hs[i], y0: c.y });
+        c.y += hs[i] + this.g;
+      });
+      this.cols = cols.map((c) => ({ items: c.items, period: c.y }));
+      this.h = hs[0];
     }
-    indexAt(col, row) {
-      const n = this.ids.length;
-      if (!n) return -1;
-      const bx = Math.floor(col / this.C), by = Math.floor(row / this.R);
-      const c = mod(col, this.C), r = mod(row, this.R);
-      const cell = r * this.C + c;
-      if (this.finite) return (bx || by || cell >= n) ? -1 : cell;
-      return mod(cell + bx * 3 + by * 5, n);
+    // every tile instance of a column that overlaps [yMin, yMax]
+    *instances(col, yMin, yMax) {
+      const cb = mod(col, this.C), bx = Math.floor(col / this.C);
+      if (this.finite && bx !== 0) return;
+      const { items, period } = this.cols[cb];
+      if (!items.length) return;
+      const phase = this.finite ? 0 : bx * Math.round(period / 3);
+      const k0 = this.finite ? 0 : Math.floor((yMin - phase) / period) - 1;
+      const k1 = this.finite ? 0 : Math.floor((yMax - phase) / period);
+      for (let k = k0; k <= k1; k++) for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        const y = phase + k * period + it.y0;
+        if (y + it.h > yMin && y < yMax) yield { key: `${col},${k},${i}`, id: it.id, x: col * this.cw, y, h: it.h };
+      }
     }
-    posOf(col, row) { return { x: col * this.cw, y: row * this.rh + (mod(col, 2) ? this.rh / 2 : 0) }; }
     center() {
       // tile (0,0) sits in the middle of the viewport
       this.tx = (this.vw - this.w) / 2; this.ty = (this.vh - this.h) / 2; this.vx = this.vy = 0;
@@ -371,7 +396,7 @@
       if (!this.hover) return;
       this.hover.classList.remove('is-hover'); this.hover = null; this.root.classList.remove('has-hover');
     }
-    makeTile(id, col, row) {
+    makeTile(id, x, y, h) {
       const a = assets[id];
       const el = document.createElement('a');
       el.className = 'tile';
@@ -379,7 +404,6 @@
       el.dataset.id = id;
       el.setAttribute('aria-label', a.inProject ? `${a.title}, ${projectById[a.projectId].title}` : a.title);
       if (a.media.bg) el.style.background = a.media.bg;
-      if (a.media.fit === 'contain') el.dataset.fit = 'contain';
       const m = a.media;
       if (m.type === 'placeholder') {
         el.innerHTML = `<span class="tile__ph">${esc(m.label || a.title)}</span>`;
@@ -389,9 +413,7 @@
       } else {
         el.innerHTML = `<img src="${m.thumb}" alt="${esc(a.title)}" loading="lazy" decoding="async">`;
       }
-      const { x, y } = this.posOf(col, row);
-      el.style.transform = '';
-      el.style.left = `${x}px`; el.style.top = `${y}px`;
+      el.style.left = `${x}px`; el.style.top = `${y}px`; el.style.height = `${h}px`;
       return el;
     }
     // Videos only exist in the DOM while their tile is on screen.
@@ -409,29 +431,25 @@
       if (!this.ids.length) { this.layer.style.transform = `translate3d(${this.tx}px,${this.ty}px,0)`; return; }
       const margin = this.cw;
       const c0 = Math.floor((-this.tx - margin) / this.cw), c1 = Math.ceil((-this.tx + this.vw + margin) / this.cw);
-      const r0 = Math.floor((-this.ty - margin - this.rh) / this.rh), r1 = Math.ceil((-this.ty + this.vh + margin) / this.rh);
+      const yMin = -this.ty - margin, yMax = -this.ty + this.vh + margin;
       const keep = new Set();
       const now = performance.now();
       const enter = entering || now < this.enterUntil;
       const cx = this.vw / 2 - this.tx, cy = this.vh / 2 - this.ty;
       const maxD = Math.hypot(this.vw, this.vh) / 2;
       const frag = document.createDocumentFragment();
-      for (let col = c0; col <= c1; col++) for (let row = r0; row <= r1; row++) {
-        const i = this.indexAt(col, row);
-        if (i < 0) continue;
-        const key = `${col},${row}`;
-        keep.add(key);
-        if (this.tiles.has(key)) continue;
-        const el = this.makeTile(this.ids[i], col, row);
-        el.dataset.key = key;
+      for (let col = c0; col <= c1; col++) for (const inst of this.instances(col, yMin, yMax)) {
+        keep.add(inst.key);
+        if (this.tiles.has(inst.key)) continue;
+        const el = this.makeTile(inst.id, inst.x, inst.y, inst.h);
+        el.dataset.key = inst.key;
         if (enter && !reduced) {
-          const { x, y } = this.posOf(col, row);
-          const d = Math.hypot(x + this.w / 2 - cx, y + this.h / 2 - cy);
+          const d = Math.hypot(inst.x + this.w / 2 - cx, inst.y + inst.h / 2 - cy);
           el.style.setProperty('--d', `${(clamp(d / maxD, 0, 1.2) * 0.25).toFixed(3)}s`);
           el.classList.add('is-in');
           el.addEventListener('animationend', () => { el.classList.remove('is-in'); el.style.removeProperty('--d'); }, { once: true });
         }
-        this.tiles.set(key, el);
+        this.tiles.set(inst.key, el);
         frag.appendChild(el);
       }
       if (frag.childNodes.length) this.layer.appendChild(frag);
@@ -440,8 +458,8 @@
       // play videos that are actually in view
       for (const el of this.tiles.values()) {
         if (!el.dataset.video) continue;
-        const x = parseFloat(el.style.left) + this.tx, y = parseFloat(el.style.top) + this.ty;
-        const inView = x + this.w > 0 && x < this.vw && y + this.h > 0 && y < this.vh;
+        const x = parseFloat(el.style.left) + this.tx, y = parseFloat(el.style.top) + this.ty, h = parseFloat(el.style.height);
+        const inView = x + this.w > 0 && x < this.vw && y + h > 0 && y < this.vh;
         if (inView && !this.paused && !document.hidden) this.startVideo(el); else { const v = el.querySelector('video'); if (v) v.pause(); if (!inView) this.stopVideo(el); }
       }
     }
@@ -455,7 +473,7 @@
       } else { this.vx = this.vy = 0; }
       if (this.finite) {
         // keep a finite canvas on screen
-        const W = this.C * this.cw - this.g, H = this.R * this.rh + this.rh / 2 - this.g;
+        const W = this.C * this.cw - this.g, H = Math.max(...this.cols.map((c) => c.period)) - this.g;
         this.tx = clamp(this.tx, Math.min(this.vw - W - 24, (this.vw - W) / 2), Math.max(24, (this.vw - W) / 2));
         this.ty = clamp(this.ty, Math.min(this.vh - H - 24, (this.vh - H) / 2), Math.max(24, (this.vh - H) / 2));
       }
@@ -525,10 +543,11 @@
       const token = ++applyToken;
       if (animate && !reduced && !sections.list.hidden) {
         // quick fade out, reorder, then the rows that are on screen fade back in top to bottom
-        table.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' }).onfinish = () => {
+        const out = table.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' });
+        out.onfinish = () => {
+          out.cancel();
           if (token !== applyToken) return;
           reorder();
-          table.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1, fill: 'forwards' });
           const vh = innerHeight;
           vis.forEach((r, i) => {
             if (r.getBoundingClientRect().top > vh) return;
@@ -609,7 +628,6 @@
       const box = document.createElement('div');
       box.className = 'lb__media';
       if (m.bg) box.style.background = m.bg;
-      if (m.fit === 'contain') box.dataset.fit = 'contain';
       if (m.type === 'placeholder') box.innerHTML = `<span class="tile__ph">${esc(m.label || a.title)}</span>`;
       else if (m.type === 'video') {
         const tv = tile && tile.querySelector('video');

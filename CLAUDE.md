@@ -28,8 +28,9 @@ Node 18+. `scripts/media.mjs` needs ffmpeg/ffprobe (local only; outputs are comm
 - `build.mjs`: catalogue derivation (canvas order is a round-robin across projects and
   singles; filters with counts), inline SVG icons, chrome, the three views, the lightbox
   shell, page template. Embeds the catalogue as JSON in `#data`.
-- `static/main.js`: `Canvas` class (virtualised infinite grid, pan with momentum, hover,
-  in-view video, repopulate animation, FLIP source rects), sheets, filters, view switch,
+- `static/main.js`: `Canvas` class (virtualised endless masonry: shortest-column packing,
+  each column repeats with its own period, blocks repeat sideways; pan with momentum,
+  hover, in-view video, repopulate animation, zoom around the opening tile), sheets, filters, view switch,
   `lb` (lightbox), Index sort/filter/preview, URL state + history.
 - `static/styles.css`: tokens for dark and light, components, `@media (max-width: 809px)`
   phone layout at the bottom. Figma values are noted inline.
@@ -67,5 +68,7 @@ to `main` or touch domain settings without Josh's explicit go-ahead.
   imagery in light mode are clear glass (white .04) with white icons.
 - Radii: sheets 18 (22 phone), docks/buttons 14 to 16, segments/rows 7 to 12, tiles 10
   (8 phone), lightbox asset 14 (12 phone).
-- Tiles 296×208 gap 20 (168×118 gap 12 on phones), columns staggered by half a row.
+- Masonry: 296px columns, 20px gaps (168px / 12px on phones); every tile keeps its asset's
+  natural aspect ratio (clamped to 0.5 to 1.6 of the column width). No panel backgrounds;
+  `bg` only backs PNGs with transparency.
 - Breakpoints: phone < 810, tablet 810 to 1199, desktop 1200+.

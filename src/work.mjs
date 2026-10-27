@@ -17,8 +17,8 @@ const vid = (id, o = {}) => ({ type: 'video', id, src: `/assets/video/${id}.mp4`
 // A piece whose file Josh still has to supply. Renders as a labelled placeholder tile.
 const todo = (id, label) => ({ type: 'placeholder', id, label });
 
-// Panel backgrounds used on the old site for media that doesn't fill its tile.
-const GREY = '#bcbbbb', GOTCHA = '#e3e8e8', DARK = '#1e1e1e', TEAL = '#3e5151', DJ = '#f0f0f0';
+// Backing colour for the few PNGs with real transparency (shown behind them in tiles and the lightbox).
+const GOTCHA = '#e3e8e8', DARK = '#1e1e1e';
 
 // ---- projects (order here = order on the canvas under the Projects filter) ------
 // Each asset: [media, title, caption?, { disciplines?, client?, year? }?]
@@ -113,14 +113,14 @@ export const projects = [
     description: "An interactive editorial website exploring the human impact of algorithmic bias. This innovative experience utilized real-time WebGL-generated ASCII art paired with hand-cut collages, creating a unique visual representation of how algorithms 'see' us through data. This juxtaposition of raw data and human stories highlighted the emotional impact of bias in machine learning datasets on real individuals.",
     assets: [
       [img('b6GtQsg2SqeYKb7YOWcOHW41FZA', 'png', { bg: '#1c1c1c' }), 'Machine Learning Fairness', 'Cover'],
-      [vid('byNB8sgCT9mJhFDcdNRNdh94sRY', { bg: '#bbbbbb', fit: 'contain' }), 'How inclusive data builds stronger brands', 'Site walkthrough'],
+      [vid('byNB8sgCT9mJhFDcdNRNdh94sRY'), 'How inclusive data builds stronger brands', 'Site walkthrough'],
       [vid('dR5ml4bBzjYRc4sqDP0K1Gg9Qnk'), 'ASCII portrait', 'Real-time WebGL'],
       [img('FZx0CcleAj9Kkt5sM6DIysyXhXM'), 'They think I am', 'Pull quote'],
       [img('nLfhIJnglytj5ioxSWV6PXQO2Co'), 'Collage stories', 'Mobile'],
-      [img('tcvyzH0yzKOTzPLAaiOvc1osO8k', 'png', { bg: '#f4f0ed', fit: 'contain' }), 'Hand-cut collage', 'Art direction'],
-      [vid('Mwhm7p9SplGS9dcUfmeQnPxlTIc', { bg: GREY, fit: 'contain' }), 'Data portrait', 'Motion study'],
-      [img('s9d87g3Fxn3jhEzVgADmNnUj9I', { bg: GREY, fit: 'contain' }), 'When data mirrors societal bias', 'Editorial'],
-      [img('1wzBEowK2y351jfw1XBWvuYZOCs', 'jpg', { bg: GREY, fit: 'contain' }), 'Full article', 'Editorial'],
+      [img('tcvyzH0yzKOTzPLAaiOvc1osO8k', 'png', { bg: '#f4f0ed' }), 'Hand-cut collage', 'Art direction'],
+      [vid('Mwhm7p9SplGS9dcUfmeQnPxlTIc'), 'Data portrait', 'Motion study'],
+      [img('s9d87g3Fxn3jhEzVgADmNnUj9I'), 'When data mirrors societal bias', 'Editorial'],
+      [img('1wzBEowK2y351jfw1XBWvuYZOCs', 'jpg'), 'Full article', 'Editorial'],
     ],
     cover: 'b6GtQsg2SqeYKb7YOWcOHW41FZA',
   },
@@ -139,11 +139,11 @@ export const projects = [
       [img('9nse1KKe6hg6GvI2bADlZYFWYM', 'png'), 'Athletes', 'Campaign'],
       [img('QCuF1rq6joLFzu63KJD2Xsfp7aE', 'png', { bg: DARK }), 'Social', 'Campaign'],
       [img('XY2sfbIrWW9XyQNcGYGEyn771I', 'png'), 'Portrait', 'Campaign'],
-      [img('Zsqs315Sr9sBc8tZLTySREDNk', 'png', { bg: DARK, fit: 'contain' }), 'Motion guidelines', 'Identity'],
+      [img('Zsqs315Sr9sBc8tZLTySREDNk', 'png', { bg: DARK }), 'Motion guidelines', 'Identity'],
       [img('gis3lD3fzYhDxSGorr4u8FEeIc', 'png'), 'Runner', 'Campaign'],
       [img('csz7FRXI1Jbao5z3sAkJOrHzObU', 'png'), 'Out of home', 'Campaign'],
-      [vid('8ysL2vRM6A4g4f36rIG6qLZOhcQ', { bg: DARK, fit: 'contain' }), 'Stripes', 'Motion'],
-      [vid('if7ldLCPXttjQGQISceaA4nQmU', { bg: DARK, fit: 'contain' }), 'Logo animation', 'Motion'],
+      [vid('8ysL2vRM6A4g4f36rIG6qLZOhcQ'), 'Stripes', 'Motion'],
+      [vid('if7ldLCPXttjQGQISceaA4nQmU'), 'Logo animation', 'Motion'],
       [img('2CBFD51wnsdtfNIFIz9XVw3a2Q', 'png'), 'Race day', 'Social'],
       [vid('aBy56jXVxTLXjzV7SPRhq2seUE'), 'Split time', 'Motion'],
       [img('5t8WdwxLGCsHmegV1EaRkrXOdM'), 'Poster', 'Campaign'],
@@ -160,15 +160,15 @@ export const projects = [
     assets: [
       [img('9CNt9DQ4i4Cc6vkmigR97hcsI4'), 'Pixel 5a', 'Cover'],
       [img('stjt7xeZle66hhhfmCKMY2Yvas'), 'In store', 'Retail'],
-      [vid('R8bKbeqS4Gbcj1iAHfzYuvpTVG0', { bg: TEAL, fit: 'contain' }), 'Make every moment shine', 'Demo app'],
-      [img('PWdPrD5bkof5qglUcPQKn04aLB0', 'png', { bg: TEAL, fit: 'contain' }), 'Meet Pixel 5a', 'Demo app'],
-      [vid('geafnGbJdioTZpjFl3cQRknBeQ', { bg: TEAL, fit: 'contain' }), 'Display', 'Demo app'],
+      [vid('R8bKbeqS4Gbcj1iAHfzYuvpTVG0'), 'Make every moment shine', 'Demo app'],
+      [img('PWdPrD5bkof5qglUcPQKn04aLB0', 'png'), 'Meet Pixel 5a', 'Demo app'],
+      [vid('geafnGbJdioTZpjFl3cQRknBeQ'), 'Display', 'Demo app'],
       [img('rSiRwrCGIw9iXrtYuJqc5s3s'), 'Companion app', 'Mobile'],
       [vid('7YlvWHmEJFoLc0xbFZwjRyiN8'), 'Hello splashes', 'Feature film'],
       [img('DycegSkrFmtPsIXxAmw4sXGTg'), 'In hand', 'Retail'],
-      [vid('RZjUl6aNXwIgbHdTCZKOHCPnGAQ', { bg: TEAL, fit: 'contain' }), 'What matters most', 'Demo app'],
-      [img('ZWBooUm6BybMhJiU2cHC3LOSA', 'png', { bg: TEAL, fit: 'contain' }), 'Camera', 'Demo app'],
-      [vid('eZMZzc2lafj1zEoAO5Hwq7NvRJ8', { bg: TEAL, fit: 'contain' }), 'Security', 'Demo app'],
+      [vid('RZjUl6aNXwIgbHdTCZKOHCPnGAQ'), 'What matters most', 'Demo app'],
+      [img('ZWBooUm6BybMhJiU2cHC3LOSA', 'png'), 'Camera', 'Demo app'],
+      [vid('eZMZzc2lafj1zEoAO5Hwq7NvRJ8'), 'Security', 'Demo app'],
       [vid('bMK7ZY0zarGITQae6pNKcmcKk'), 'Pixel', 'Motion'],
     ],
     cover: '9CNt9DQ4i4Cc6vkmigR97hcsI4',
@@ -181,14 +181,14 @@ export const projects = [
     description: "Revitalizing a cherished brand, I spearheaded the redesign of Gotcha's e-commerce website for their full-line relaunch. The user-centric approach prioritizes a seamless customer journey, with a focus on minimizing checkout friction to drive sales and rekindle brand loyalty.",
     assets: [
       [img('PnLCLGksDl0r9Ep9D39k2h3PIHo'), 'Gotcha.com', 'Cover'],
-      [vid('vGZcZp5yJA2eAfZL7drkVUXnk3k', { bg: GOTCHA, fit: 'contain' }), 'Homepage', 'Web'],
-      [img('7oEJoXgvi5hU5bI9WaKd9yqI', 'jpg', { bg: GOTCHA, fit: 'contain' }), 'All products', 'Web'],
+      [vid('vGZcZp5yJA2eAfZL7drkVUXnk3k'), 'Homepage', 'Web'],
+      [img('7oEJoXgvi5hU5bI9WaKd9yqI', 'jpg'), 'All products', 'Web'],
       [vid('JR02ySyqkjN3OBDqdFs4VDyCRCU'), 'Lookbook', 'Web'],
-      [vid('RfMUuhZ8ZTam6OKtnZ5XSpJBg0', { bg: GOTCHA, fit: 'contain' }), 'Shop', 'Web'],
-      [img('ynMl1Ae4Wb7hLq1bjfSHxdz2Q', { bg: GOTCHA, fit: 'contain' }), 'Product page', 'Web'],
-      [img('0I8s9LzEhXr0mr3OH9idLgkwf0', 'png', { bg: GOTCHA, fit: 'contain' }), 'Hoodie', 'Product'],
+      [vid('RfMUuhZ8ZTam6OKtnZ5XSpJBg0'), 'Shop', 'Web'],
+      [img('ynMl1Ae4Wb7hLq1bjfSHxdz2Q'), 'Product page', 'Web'],
+      [img('0I8s9LzEhXr0mr3OH9idLgkwf0', 'png', { bg: GOTCHA }), 'Hoodie', 'Product'],
       [img('O7JRGjqRxFqTZo4a1GpmqfUTqaQ'), 'Campaign', 'Photography'],
-      [vid('j8UU7HMk8W9eJlxdHiwZpk1MwPc', { bg: GOTCHA, fit: 'contain' }), 'Mobile', 'Web'],
+      [vid('j8UU7HMk8W9eJlxdHiwZpk1MwPc'), 'Mobile', 'Web'],
     ],
     cover: 'PnLCLGksDl0r9Ep9D39k2h3PIHo',
   },
@@ -200,12 +200,12 @@ export const projects = [
     description: "During the height of the pandemic, Don Julio sought to maintain a connection with its core audience. As the design lead at Grow, I spearheaded the creation of an immersive, interactive brand experience. This digital tour transported users to the heart of Don Julio's legacy, offering a virtual exploration of the distillery and the brand's homeland. Users get to experience real stories from real employees, and explore interactive WebGL scenes uncovering interesting facts about the brand along the way.",
     assets: [
       [img('mIgikRgM9MOcdKulTAnQ5p61pYQ'), 'Four Devotions', 'Cover'],
-      [vid('g2CTu6S0Blg0MaMRAo00jsY6oak', { bg: DJ, fit: 'contain' }), 'Four Devotions', 'Site walkthrough'],
-      [vid('C3dSKtEYIA1S8IzUb9k7Gr6G4I', { bg: DJ, fit: 'contain' }), 'The fields', 'WebGL scene'],
+      [vid('g2CTu6S0Blg0MaMRAo00jsY6oak'), 'Four Devotions', 'Site walkthrough'],
+      [vid('C3dSKtEYIA1S8IzUb9k7Gr6G4I'), 'The fields', 'WebGL scene'],
       [img('WHtp9niqBDTLp61YRS10IBWto0Y'), 'The jimador', 'Photography'],
-      [vid('FcHURMvPPMQH0cyxtmX7SW9qcE', { bg: DJ, fit: 'contain' }), 'Mobile', 'Web'],
-      [vid('wpjaZDSVJwG4omvHzDxmWbxk3o', { bg: DJ, fit: 'contain' }), 'The heart of the agave', 'Film'],
-      [vid('BoT8IzxM1b2hayWFXUs049lmZe4', { bg: DJ, fit: 'contain' }), 'Type', 'Motion'],
+      [vid('FcHURMvPPMQH0cyxtmX7SW9qcE'), 'Mobile', 'Web'],
+      [vid('wpjaZDSVJwG4omvHzDxmWbxk3o'), 'The heart of the agave', 'Film'],
+      [vid('BoT8IzxM1b2hayWFXUs049lmZe4'), 'Type', 'Motion'],
       [img('eNzYVJg4QoJNfU2q3UYQnklMcY4'), 'Soil', 'Photography'],
       [vid('7V2hwegmxB4uaNU8TwmbCywOrYE'), 'Four Devotions', 'Film'],
     ],
@@ -241,7 +241,7 @@ export function buildCatalogue(manifest = {}) {
   const uniq = (slug) => { let s = slug, n = 2; while (used.has(s)) s = `${slug}-${n++}`; used.add(s); return s; };
   const mediaOf = (m) => {
     const dims = manifest[m.id] || {};
-    const out = { type: m.type, src: m.src || null, width: dims.width || 1600, height: dims.height || 1000, bg: m.bg || null, fit: m.fit || 'cover', label: m.label || null };
+    const out = { type: m.type, src: m.src || null, width: dims.width || 1600, height: dims.height || 1200, bg: m.bg || null, label: m.label || null };
     if (m.type !== 'placeholder') out.thumb = `/assets/thumb/${m.id}.jpg`;
     if (m.type === 'video') out.poster = `/assets/poster/${m.id}.jpg`;
     return out;
