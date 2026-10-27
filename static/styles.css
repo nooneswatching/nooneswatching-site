@@ -39,6 +39,7 @@
   --over-strong: rgba(255, 255, 255, .12);
   --over-border: transparent;
   --over-ink: #fff;
+  --over-hover: rgba(255, 255, 255, .2);
   --strip: rgba(28, 28, 30, .6);
   --strip-outline: #fff;
   --lb-dim: rgba(5, 5, 5, .68);
@@ -99,12 +100,14 @@
     --glass-shadow: 0 20px 50px rgba(0, 0, 0, .1);
     --sheet-shadow: 0 20px 50px rgba(0, 0, 0, .12);
     --card-shadow: 0 20px 50px rgba(0, 0, 0, .12);
-    /* over imagery: clear glass, white icons */
-    --over: rgba(255, 255, 255, .04);
-    --over-strong: rgba(255, 255, 255, .04);
-    --over-border: rgba(255, 255, 255, .08);
-    --over-ink: #fff;
-    --strip: rgba(255, 255, 255, .04);
+    /* the controls sit over the light dim, not over imagery, so they are ink on
+       light glass; white on clear glass vanished there */
+    --over: rgba(255, 255, 255, .72);
+    --over-strong: rgba(255, 255, 255, .82);
+    --over-border: rgba(17, 17, 17, .1);
+    --over-ink: #111;
+    --over-hover: rgba(255, 255, 255, .95);
+    --strip: rgba(255, 255, 255, .72);
     --strip-outline: #111;
     --lb-dim: rgba(243, 243, 241, .68);
     --lb-dim-m: rgba(243, 243, 241, .72);
@@ -368,7 +371,7 @@ body[data-noblur] .canvas, body[data-noblur] .list, body[data-noblur] .info { fi
 
 .lb__close { position: absolute; top: 40px; right: 40px; display: flex; align-items: center; justify-content: center; width: 44px; height: 36px; border-radius: 10px; background: var(--over-strong); border-color: var(--over-border); color: var(--over-ink); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
 .lb__arrow { position: absolute; top: 50%; display: flex; align-items: center; justify-content: center; width: 48px; height: 40px; border-radius: 10px; background: var(--over); border-color: var(--over-border); color: var(--over-ink); transform: translateY(-50%); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); transition: background .15s ease; }
-.lb__arrow:hover, .lb__close:hover { background: rgba(255, 255, 255, .2); }
+.lb__arrow:hover, .lb__close:hover { background: var(--over-hover); }
 .lb__arrow--prev { left: 40px; }
 .lb__arrow--next { right: 40px; }
 .lb__bottom { position: absolute; left: 50%; bottom: 36px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; }
