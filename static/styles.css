@@ -171,7 +171,7 @@ body.lb-open .logo { opacity: 0; pointer-events: none; }
 /* ---- grid canvas --------------------------------------------------------------- */
 .grid { position: fixed; inset: 0; overflow: hidden; background: var(--bg); }
 body:not([data-view="grid"]) .grid { display: none; }
-.canvas { position: absolute; inset: 0; cursor: grab; touch-action: none; overscroll-behavior: none; user-select: none; -webkit-user-select: none; }
+.canvas { position: absolute; inset: 0; overflow: hidden; contain: paint; cursor: grab; touch-action: none; overscroll-behavior: none; user-select: none; -webkit-user-select: none; } /* clipped: the lightbox blur then rasters one screen, not every tile that hangs off it */
 .canvas.is-dragging { cursor: grabbing; }
 body.lb-open .canvas .tile:not(.is-hover) { opacity: .5; }
 .canvas__layer { position: absolute; left: 0; top: 0; will-change: transform; }
@@ -320,6 +320,8 @@ body[data-view="grid"] .views__icon[data-view-icon="grid"], body[data-view="list
 body.lb-open .canvas, body.lb-open .list, body.lb-open .info { filter: blur(var(--lb-blur, 60px)); }
 .canvas { transition: filter .5s ease-in; }
 body.lb-open .dock, body.lb-open .views { opacity: 0; pointer-events: none; }
+body[data-noblur] .canvas, body[data-noblur] .list, body[data-noblur] .info { filter: none !important; }
+#diag { position: fixed; left: 8px; top: 8px; z-index: 999; padding: 4px 8px; border-radius: 6px; background: #c00; color: #fff; font: 12px/1.4 monospace; pointer-events: none; }
 .dock, .views { transition: opacity .25s ease; }
 .lb__stage { position: absolute; inset: 24px; touch-action: pan-y; }
 .lb__asset { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }

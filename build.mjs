@@ -10,6 +10,7 @@
 // /work/<project>/<n> is rewritten to /work/<project> by vercel.json and scripts/serve.mjs.
 import { mkdirSync, writeFileSync, readFileSync, readdirSync, statSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
 import { site, socials, info } from './src/content.mjs';
 import { buildCatalogue, DISCIPLINES } from './src/work.mjs';
 
@@ -281,6 +282,19 @@ for (const a of assets.filter((x) => !x.inProject)) {
 
 if (existsSync(OUT)) rmSync(OUT, { recursive: true, force: true });
 mkdirSync(`${OUT}/work`, { recursive: true });
-for (const [f, html] of Object.entries(out)) writeFileSync(`${OUT}/${f}`, html);
+// /assets is served immutable for a year, so every asset URL carries a content hash:
+// a re-encoded or replaced file gets a new URL and no browser keeps the old one.
+const hashes = new Map();
+const ver = (url) => {
+  const clean = url.replace(/[?#].*$/, '');
+  if (!hashes.has(clean)) {
+    const file = join('static', clean);
+    hashes.set(clean, existsSync(file) ? createHash('sha1').update(readFileSync(file)).digest('hex').slice(0, 8) : null);
+  }
+  const h = hashes.get(clean);
+  return h ? `${clean}?v=${h}` : clean;
+};
+const versioned = (html) => html.replace(/\/assets\/[^"'\s)<\\?]+/g, (m) => ver(m));
+for (const [f, html] of Object.entries(out)) writeFileSync(`${OUT}/${f}`, versioned(html));
 copyDir('static', OUT);
 console.log(`Built ${Object.keys(out).length} pages -> ${OUT}/ (${assets.length} pieces, ${projects.length} projects)`);

@@ -18,6 +18,11 @@
   const body = document.body;
   const $ = (id) => document.getElementById(id);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Diagnostics for devices I cannot run: ?noblur drops the blur behind the lightbox,
+  // ?diag shows the longest frame of each open/close zoom. Both stick for the tab.
+  const flags = new URLSearchParams(location.search);
+  for (const f of ['noblur', 'diag']) { if (flags.has(f)) { if (flags.get(f) === '0') sessionStorage.removeItem(f); else sessionStorage.setItem(f, '1'); } if (sessionStorage.getItem(f)) document.body.dataset[f] = ''; }
+  const diag = (msg) => { if (!('diag' in document.body.dataset)) return; let d = document.getElementById('diag'); if (!d) { d = document.createElement('div'); d.id = 'diag'; document.body.appendChild(d); } d.textContent = msg; };
   const phone = matchMedia('(max-width: 809px)');
   const hoverable = matchMedia('(hover: hover)').matches;
   const isPhone = () => phone.matches;
@@ -779,8 +784,9 @@
       box._flipping = true; box.classList.add('is-flipping');
       // the clock advances at most 50ms per frame: a raster stall (the blur on phones) then
       // delays the zoom instead of swallowing its first half
-      let last = performance.now(), t = 0;
+      let last = performance.now(), t = 0, worst = 0, frames = 0;
       const frame = (now) => {
+        worst = Math.max(worst, now - last); frames++;
         t += Math.min(50, Math.max(0, now - last)); last = now;
         const p = Math.min(1, t / duration);
         const e = easeOut(p);
@@ -794,6 +800,7 @@
         if (p < 1) flipRaf = requestAnimationFrame(frame);
         else {
           box._flipping = false; box.classList.remove('is-flipping');
+          diag(`${opening ? 'open' : 'close'}: ${frames} frames, longest ${Math.round(worst)}ms`);
           if (opening) { box.style.borderRadius = ''; place(box, box._rest); } else canvas.release();
           if (done) done();
         }
