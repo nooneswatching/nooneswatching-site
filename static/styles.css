@@ -349,6 +349,11 @@ body[data-noglass] .glass, body[data-noglass] .dock__btn::before, body[data-nogl
 body[data-noglass] .logo { mix-blend-mode: normal !important; }
 body[data-nohover] .tile.is-hover { transform: none !important; box-shadow: none !important; }
 body[data-squarevideo] .tile:has(video) { border-radius: 0 !important; }
+#tune { position: fixed; right: 16px; top: 16px; z-index: 60; display: grid; gap: 8px; padding: 12px 14px; border-radius: 12px; background: var(--glass-dock); border: 1px solid var(--glass-border); color: var(--ink); font-size: 12px; -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+#tune label { display: grid; grid-template-columns: 52px 160px 44px; align-items: center; gap: 10px; }
+#tune output { text-align: right; color: var(--ink-50); font-variant-numeric: tabular-nums; }
+#tune input[type="range"] { width: 100%; accent-color: var(--ink); }
+#tune button { justify-self: end; padding: 4px 10px; border-radius: 7px; background: var(--glass); border: 1px solid var(--glass-border); color: var(--ink); font-size: 12px; }
 #diag { position: fixed; left: 8px; top: 8px; z-index: 999; padding: 4px 8px; border-radius: 6px; background: #c00; color: #fff; font: 12px/1.4 monospace; pointer-events: none; }
 .dock, .views { transition: opacity .25s ease; }
 /* the filter belongs to the grid: Index lists everything, Info has nothing to filter */
