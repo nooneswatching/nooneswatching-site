@@ -820,15 +820,26 @@
       if (doPush) push();
     }
 
+    // Left/right walk the whole filmstrip first; past its ends they move on through the
+    // grid order, skipping further tiles of the project just finished, and enter the next
+    // project at its first asset (forward) or its last (backward).
     function step(dir) {
       if (!cur) return;
+      const p = cur.project ? projectById[cur.project] : null;
+      if (p) {
+        const j = p.assets.indexOf(cur.id) + dir;
+        if (j >= 0 && j < p.assets.length) { jump(p.assets[j]); wake(); return; }
+      }
       const list = navList();
       if (!list.length) return;
-      const pos = mod(cur.pos + dir, list.length);
-      const id = list[pos];
-      const a = assets[id];
-      cur.pos = pos; cur.id = id; cur.project = a.inProject ? a.projectId : null;
-      state.open = { id, project: cur.project };
+      let pos = cur.pos, guard = 0;
+      do { pos = mod(pos + dir, list.length); guard++; } while (p && assets[list[pos]].inProject && assets[list[pos]].projectId === p.id && guard < list.length);
+      const a = assets[list[pos]];
+      let id = list[pos];
+      const project = a.inProject ? a.projectId : null;
+      if (project) { const np = projectById[project]; id = dir > 0 ? np.assets[0] : np.assets[np.assets.length - 1]; }
+      cur.pos = pos; cur.id = id; cur.project = project;
+      state.open = { id, project };
       render();
       push(true);
       wake();

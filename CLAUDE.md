@@ -48,7 +48,9 @@ in `dist/` with its own title/OG tags; main.js reads `location` on boot.
 - Labels on tiles appear only on hover. No always-on labels, no minimap, no recenter.
 - Filters are mutually exclusive; applying one repopulates the canvas (no dimming).
   `REPEAT_SMALL_SETS` in main.js is the open question (repeat vs finite canvas).
-- Lightbox: left/right always move through the current filter's grid order. Project
+- Lightbox: left/right walk the whole filmstrip first, then move on through the current
+  filter's grid order (skipping further tiles of the project just finished) and enter the
+  next project at its first asset going forward, its last going backward. Project
   assets show the project card (expands downward over the asset, never resizes it) and a
   filmstrip; singles show title + caption + "From <project> ↗". Controls auto-hide after
   2s without pointer movement on desktop only; on phones they never hide.
