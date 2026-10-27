@@ -465,22 +465,13 @@
     resume() { if (!this.paused) return; this.paused = false; this.metrics(); this.dirty = true; }
     // The canvas zooms in around the tile that opens (like the reference moodboard app):
     // neighbours fly outward, faster the farther they are, and settle back on close.
-    push(source) {
-      if (reduced || !source) return;
-      const r = source.getBoundingClientRect();
-      const ox = r.left + r.width / 2, oy = r.top + r.height / 2;
-      this.zoom = { ox, oy, s: isPhone() ? ZOOM_PHONE : ZOOM };
+    // The lightbox drives the scale per frame so the asset and its tile stay glued.
+    setZoom(ox, oy, z) {
+      this.zoom = z > 1 ? { ox, oy, s: z } : null;
       this.root.style.transformOrigin = `${ox}px ${oy}px`;
-      this.root.style.transition = 'transform .5s cubic-bezier(.22, 1, .36, 1)';
-      this.root.style.transform = `scale(${this.zoom.s})`;
+      this.root.style.transform = z > 1 ? `scale(${z})` : '';
     }
-    release() {
-      if (!this.zoom) return;
-      this.zoom = null;
-      this.root.style.transition = 'transform .45s cubic-bezier(.22, 1, .36, 1)';
-      this.root.style.transform = '';
-      setTimeout(() => { if (!this.zoom) { this.root.style.transition = ''; this.root.style.transformOrigin = ''; } }, 500);
-    }
+    release() { this.zoom = null; this.root.style.transform = ''; this.root.style.transformOrigin = ''; }
     // a tile's rect as it will be once the zoom is released (FLIP target on close)
     restRect(el) {
       const r = el.getBoundingClientRect();
@@ -659,18 +650,45 @@
       if (old) {
         if (!reduced) { old.style.transition = 'opacity .2s ease'; old.style.opacity = '0'; setTimeout(() => old.remove(), 200); } else old.remove();
       }
-      if (fromTile && !reduced) { flipIn(fromTile); canvas.push(fromTile); }
+      if (fromTile && !reduced) flipIn(fromTile);
       else if (!reduced && old) { media.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease' }); }
       document.title = `${p ? p.title : a.title} · NO/ONES/WATCHING`;
     }
 
+    // One rAF loop moves the canvas zoom and the asset together: each frame the asset is
+    // placed exactly where the tile is at that moment, so there is never a handoff jump.
+    let flipRaf = 0;
+    const easeOut = (p) => 1 - Math.pow(1 - p, 4);
+    function zoomFlip(tile, opening, done) {
+      cancelAnimationFrame(flipRaf);
+      const Z = isPhone() ? ZOOM_PHONE : ZOOM;
+      const rest = canvas.restRect(tile);                       // tile at zoom 1
+      const full = (() => { const t = media.style.transform; media.style.transform = ''; const r = media.getBoundingClientRect(); media.style.transform = t; return r; })();
+      const ox = rest.left + rest.width / 2, oy = rest.top + rest.height / 2;
+      const radius = parseFloat(getComputedStyle(tile).borderRadius) || 8;
+      const fullRadius = parseFloat(getComputedStyle(media).borderRadius) || 14;
+      const duration = opening ? 420 : 360;
+      const t0 = performance.now();
+      const frame = (now) => {
+        const p = Math.min(1, Math.max(0, (now - t0) / duration));
+        const e = easeOut(p);
+        const k = opening ? e : 1 - e;                          // 0 = at rest in the grid, 1 = open
+        const z = 1 + (Z - 1) * k;
+        canvas.setZoom(ox, oy, z);
+        // where the tile is right now, zoom included
+        const tl = ox + (rest.left - ox) * z, tt = oy + (rest.top - oy) * z, tw = rest.width * z, th = rest.height * z;
+        const left = tl + (full.left - tl) * k, top = tt + (full.top - tt) * k, w = tw + (full.width - tw) * k, h = th + (full.height - th) * k;
+        const sx = w / full.width, sy = h / full.height;
+        media.style.transform = `translate(${(left - full.left).toFixed(2)}px, ${(top - full.top).toFixed(2)}px) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`;
+        media.style.borderRadius = `${((radius + (fullRadius - radius) * k) / sx).toFixed(2)}px / ${((radius + (fullRadius - radius) * k) / sy).toFixed(2)}px`;
+        if (p < 1) flipRaf = requestAnimationFrame(frame);
+        else { if (opening) { media.style.transform = ''; media.style.borderRadius = ''; } else canvas.release(); if (done) done(); }
+      };
+      frame(t0);
+    }
+
     function flipIn(tile) {
-      const from = tile.getBoundingClientRect(), to = media.getBoundingClientRect();
-      const sx = from.width / to.width, sy = from.height / to.height;
-      media.animate([
-        { transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${sx}, ${sy})`, borderRadius: `${parseFloat(getComputedStyle(tile).borderRadius) / sx}px` },
-        { transform: 'none', borderRadius: '' },
-      ], { duration: 380, easing: 'cubic-bezier(.22,1,.36,1)' });
+      zoomFlip(tile, true);
       ui.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, delay: 120, easing: 'ease', fill: 'backwards' });
       // the dim ramps in with the zoom so the neighbours are seen flying outward
       el.querySelector('.lb__bg').animate([{ opacity: 0 }, { opacity: 1 }], { duration: 420, easing: 'ease-in' });
@@ -707,6 +725,7 @@
         pointerSeen = false;
         // the close fades leave fill:forwards animations behind; clear them before reopening
         [ui, el.querySelector('.lb__bg')].forEach((x) => x.getAnimations().forEach((a) => a.cancel()));
+        if (!tile) canvas.release();
         lastFocus = document.activeElement;
         el.hidden = false;
         body.classList.add('lb-open');
@@ -728,8 +747,7 @@
       state.open = null;
       body.classList.remove('lb-open');
       const tile = state.view === 'grid' ? canvas.tileFor(id) : null;
-      const to = tile ? canvas.restRect(tile) : null;
-      canvas.release();
+      if (!tile || reduced) canvas.release();
       const finish = () => {
         el.hidden = true;
         if (media) { media.remove(); media = null; }
@@ -738,11 +756,9 @@
         if (lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true }); else $('canvas').focus({ preventScroll: true });
       };
       if (tile && !reduced && media) {
-        const from = media.getBoundingClientRect();
-        const sx = to.width / from.width, sy = to.height / from.height;
         ui.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: 'forwards' });
         el.querySelector('.lb__bg').animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' });
-        media.animate([{ transform: 'none' }, { transform: `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(${sx}, ${sy})` }], { duration: 320, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'forwards' }).onfinish = finish;
+        zoomFlip(tile, false, finish);
         canvas.resume();
       } else if (!reduced) {
         el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'ease' }).onfinish = finish;
