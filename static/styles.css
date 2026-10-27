@@ -169,7 +169,7 @@ body.lb-open .logo { opacity: 0; pointer-events: none; }
 @keyframes view-fade { from { opacity: 0; } }
 
 /* ---- grid canvas --------------------------------------------------------------- */
-.grid { position: fixed; inset: 0; overflow: hidden; background: var(--bg); transition: filter .5s ease-in; }
+.grid { position: fixed; inset: 0; overflow: hidden; background: var(--bg); }
 body:not([data-view="grid"]) .grid { display: none; }
 .canvas { position: absolute; inset: 0; cursor: grab; touch-action: none; overscroll-behavior: none; user-select: none; -webkit-user-select: none; }
 .canvas.is-dragging { cursor: grabbing; }
@@ -316,7 +316,10 @@ body[data-view="grid"] .views__icon[data-view-icon="grid"], body[data-view="list
 .lb__bg { position: absolute; inset: 0; background: var(--lb-dim); }
 /* The view behind blurs itself instead of the overlay using backdrop-filter, which
    iOS Safari drops over the transformed canvas layer. The dock and view switch hide. */
-body.lb-open .grid, body.lb-open .list, body.lb-open .info { filter: blur(var(--lb-blur, 60px)); }
+/* The blur sits on .canvas, the element that also zooms, so the zoom moves one pre-blurred
+   texture instead of re-blurring the screen every frame. */
+body.lb-open .canvas, body.lb-open .list, body.lb-open .info { filter: blur(var(--lb-blur, 60px)); }
+.canvas { transition: filter .5s ease-in; }
 body.lb-open .dock, body.lb-open .views { opacity: 0; pointer-events: none; }
 .dock, .views { transition: opacity .25s ease; }
 .lb__stage { position: absolute; inset: 24px; touch-action: pan-y; }
@@ -393,6 +396,8 @@ body[data-view="grid"].lenis-stopped, html.lenis body[data-view="grid"] { height
 /* ---- phone (< 810) ------------------------------------------------------------- */
 @media (max-width: 809px) {
   :root { --tw: 168px; --th: 118px; --tg: 12px; --r-tile: 8px; --r-sheet: 22px; --edge: 16px; --r-lb: 12px; --lb-blur: 36px; }
+  .canvas, .lb__stage, .lb__close, .lb__bottom { transition: none; }
+  body.lb-open .canvas .tile:not(.is-hover) { opacity: 1; }
   .logo { top: max(var(--edge), calc(env(safe-area-inset-top) + 12px)); }
   .logo__word { font-size: 15px; }
   .grid__fade--t { height: 130px; } .grid__fade--b { height: 150px; } .grid__fade--l, .grid__fade--r { width: 32px; }
