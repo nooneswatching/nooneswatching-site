@@ -601,14 +601,31 @@
       else lb.open(row.dataset.id, { project: null, keyboard });
     });
     if (hoverable) {
-      let raf = 0, px = 0, py = 0;
-      const move = () => { raf = 0; preview.style.setProperty('--pt', `translate(${px + 24}px, ${py - 90}px)`); };
-      table.addEventListener('pointermove', (e) => { px = e.clientX; py = e.clientY; if (!raf) raf = requestAnimationFrame(move); });
+      // The preview card follows the pointer, keeps the piece's own aspect ratio (within
+      // 320 by 240) and leans with the pointer's horizontal motion, settling back when still.
+      let raf = 0, px = 0, py = 0, lx = 0, lean = 0, target = 0, settleRaf = 0;
+      const BASE = -4, MAXW = 320, MAXH = 240;
+      const apply = () => { preview.style.setProperty('--pt', `translate(${px + 24}px, ${py - preview.offsetHeight / 2}px)`); preview.style.setProperty('--rot', `${(BASE + lean).toFixed(2)}deg`); };
+      const settle = () => {
+        settleRaf = 0;
+        target *= .8; lean += (target - lean) * .18;
+        if (Math.abs(lean) < .05 && Math.abs(target) < .05) { lean = target = 0; apply(); return; }
+        apply(); settleRaf = requestAnimationFrame(settle);
+      };
+      const move = () => { raf = 0; lean += (target - lean) * .35; apply(); if (!settleRaf) settleRaf = requestAnimationFrame(settle); };
+      table.addEventListener('pointermove', (e) => {
+        const dx = e.clientX - lx; lx = e.clientX; px = e.clientX; py = e.clientY;
+        target = clamp(target * .5 + dx * .6, -14, 14);                  // lean with the motion, up to 14deg
+        if (!raf) raf = requestAnimationFrame(move);
+      });
       table.addEventListener('pointerover', (e) => {
         const row = e.target.closest('.row');
         if (!row || !row.dataset.thumb) { preview.classList.remove('is-on'); return; }
+        const r = Number(row.dataset.ratio) || 1.5;
+        let w = MAXW, h = w / r; if (h > MAXH) { h = MAXH; w = h * r; }
+        preview.style.width = `${Math.round(w)}px`; preview.style.height = `${Math.round(h)}px`;
         if (previewImg.src !== location.origin + row.dataset.thumb) previewImg.src = row.dataset.thumb;
-        preview.classList.add('is-on');
+        preview.classList.add('is-on'); apply();
       });
       table.addEventListener('pointerleave', () => preview.classList.remove('is-on'));
     }

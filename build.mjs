@@ -139,10 +139,10 @@ const grid = () => `<section class="grid" id="grid" aria-label="Work" data-lenis
 // Index rows: one per project, then the single pieces. main.js filters and sorts them.
 const indexRows = () => {
   const rows = [
-    ...projects.map((p) => ({ kind: 'project', id: p.id, href: p.url, thumb: byId[p.cover].media.thumb, title: p.title, client: p.client, disciplines: p.disciplines, type: `Project · ${p.assets.length}`, year: p.year })),
-    ...assets.filter((a) => !a.inProject).map((a) => ({ kind: 'single', id: a.id, href: `/work/${a.slug}`, thumb: a.media.thumb, title: a.title, client: a.client, disciplines: a.disciplines, type: 'Single', year: a.year })),
+    ...projects.map((p) => ({ kind: 'project', id: p.id, href: p.url, thumb: byId[p.cover].media.thumb, ratio: byId[p.cover].media.width / byId[p.cover].media.height, title: p.title, client: p.client, disciplines: p.disciplines, type: `Project · ${p.assets.length}`, year: p.year })),
+    ...assets.filter((a) => !a.inProject).map((a) => ({ kind: 'single', id: a.id, href: `/work/${a.slug}`, thumb: a.media.thumb, ratio: a.media.width / a.media.height, title: a.title, client: a.client, disciplines: a.disciplines, type: 'Single', year: a.year })),
   ];
-  return rows.map((r) => `<a class="row" href="${r.href}" data-kind="${r.kind}" data-id="${r.id}" data-title="${esc(r.title.toLowerCase())}" data-year="${r.year}" data-disc="${r.disciplines.join(',')}" data-thumb="${r.thumb || ''}">
+  return rows.map((r) => `<a class="row" href="${r.href}" data-kind="${r.kind}" data-id="${r.id}" data-title="${esc(r.title.toLowerCase())}" data-year="${r.year}" data-disc="${r.disciplines.join(',')}" data-thumb="${r.thumb || ''}" data-ratio="${(r.ratio || 1.5).toFixed(4)}">
   <span class="row__thumb">${r.thumb ? `<img src="${r.thumb}" alt="" loading="lazy">` : ''}</span>
   <span class="row__title">${esc(r.title)}</span>
   <span class="row__client">${esc(r.client)}</span>
