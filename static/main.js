@@ -343,7 +343,7 @@
         const tile = e.target.closest('.tile');
         if (!tile) return;
         e.preventDefault();
-        if (e.detail === 0) lb.open(tile.dataset.id, { tile }); // keyboard (Enter) on a focused tile
+        if (e.detail === 0) lb.open(tile.dataset.id, { tile, keyboard: true }); // keyboard (Enter) on a focused tile
       });
       root.addEventListener('dragstart', (e) => e.preventDefault());
       root.addEventListener('wheel', (e) => {
@@ -572,8 +572,9 @@
       if (!row || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return;
       e.preventDefault();
       preview.classList.remove('is-on');
-      if (row.dataset.kind === 'project') { const p = projectById[row.dataset.id]; lb.open(p.cover, { project: p.id }); }
-      else lb.open(row.dataset.id, { project: null });
+      const keyboard = e.detail === 0;
+      if (row.dataset.kind === 'project') { const p = projectById[row.dataset.id]; lb.open(p.cover, { project: p.id, keyboard }); }
+      else lb.open(row.dataset.id, { project: null, keyboard });
     });
     if (hoverable) {
       let raf = 0, px = 0, py = 0;
@@ -765,7 +766,7 @@
       }
     }
 
-    function open(id, { tile = null, project, push: doPush = true } = {}) {
+    function open(id, { tile = null, project, push: doPush = true, keyboard = false } = {}) {
       const a = assets[id];
       const list = navList();
       let pos = list.indexOf(id);
@@ -787,7 +788,9 @@
         if (!reduced && !tile) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 250, easing: 'ease' });
       }
       render({ fromTile: tile });
-      if (!wasOpen) $('lb-close').focus({ preventScroll: true });
+      // keyboard users land on the close button; everyone else gets the dialog itself so
+      // no focus ring appears, while Esc and the arrows still work
+      if (!wasOpen) (keyboard ? $('lb-close') : el).focus({ preventScroll: true });
       wake();
       if (doPush) push(!wasOpen && !tile && !state.open ? true : false);
     }

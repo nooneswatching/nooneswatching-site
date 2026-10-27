@@ -186,7 +186,7 @@ const infoView = () => `<section class="info" id="info" hidden>
 </section>`;
 
 // ---- lightbox -------------------------------------------------------------------
-const lightbox = () => `<div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="Work">
+const lightbox = () => `<div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="Work" tabindex="-1">
   <div class="lb__bg"></div>
   <div class="lb__stage" id="lb-stage">
     <figure class="lb__asset" id="lb-asset"></figure>
