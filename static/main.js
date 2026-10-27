@@ -33,7 +33,7 @@
     const q = new URLSearchParams(search);
     const f = q.get('f');
     const out = { view: 'grid', filter: filterById[f] ? f : 'all', open: null };
-    if (path === '/list') out.view = 'list';
+    if (path === '/list' || path === '/index') out.view = 'list'; // Vercel serves index.html for /index, so the view is picked up here
     else if (path === '/info') out.view = 'info';
     else if (path.startsWith('/work/')) {
       const [slug, n] = path.slice(6).split('/');
