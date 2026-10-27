@@ -25,7 +25,7 @@
   // ?novideo: tiles never create clips. ?noglass: no backdrop blurs or blend modes. ?nohover: no
   // tile hover lift/shadow. Each sticks for the tab; ?flag=0 clears it. Safari A/B.
   // ?squarevideo: video tiles lose their rounded corners (WebKit masks video layers to clip them)
-  for (const f of ['noblur', 'diag', 'novideo', 'noglass', 'nohover', 'squarevideo', 'tune']) { if (flags.has(f)) { if (flags.get(f) === '0') sessionStorage.removeItem(f); else sessionStorage.setItem(f, '1'); } if (sessionStorage.getItem(f)) document.body.dataset[f] = ''; }
+  for (const f of ['noblur', 'diag', 'novideo', 'noglass', 'nohover', 'squarevideo']) { if (flags.has(f)) { if (flags.get(f) === '0') sessionStorage.removeItem(f); else sessionStorage.setItem(f, '1'); } if (sessionStorage.getItem(f)) document.body.dataset[f] = ''; }
   const diag = (msg) => { if (!('diag' in document.body.dataset)) return; let d = document.getElementById('diag'); if (!d) { d = document.createElement('div'); d.id = 'diag'; document.body.appendChild(d); } d.textContent = msg; };
   const phone = matchMedia('(max-width: 809px)');
   const hoverable = matchMedia('(hover: hover)').matches;
@@ -536,30 +536,6 @@
   }
   const canvas = new Canvas($('canvas'), $('layer'));
 
-  // ?tune: sliders for the grid gutter and column width, relaid live, remembered for the
-  // tab. For picking values with Josh; the defaults live in styles.css (--tg, --tw).
-  if ('tune' in document.body.dataset) {
-    const root = document.documentElement;
-    const saved = JSON.parse(sessionStorage.getItem('tune-values') || '{}');
-    const panel = document.createElement('div'); panel.id = 'tune';
-    const defaults = { tg: parseFloat(getComputedStyle(root).getPropertyValue('--tg')), tw: parseFloat(getComputedStyle(root).getPropertyValue('--tw')) };
-    const controls = [['tg', 'Gutter', 0, 80], ['tw', 'Column', 160, 480]];
-    panel.innerHTML = controls.map(([k, label, min, max]) => `<label><span>${label}</span><input type="range" min="${min}" max="${max}" step="1" data-k="${k}" value="${saved[k] ?? defaults[k]}"><output>${saved[k] ?? defaults[k]}px</output></label>`).join('') + '<button type="button" data-reset>Reset</button>';
-    document.body.appendChild(panel);
-    const relayout = () => { canvas.metrics(); canvas.setItems(canvas.ids, false); };   // tiles are repositioned by a rebuild
-    const set = (k, v) => { root.style.setProperty(`--${k}`, `${v}px`); panel.querySelector(`[data-k="${k}"] + output`).textContent = `${v}px`; };
-    for (const k of Object.keys(saved)) set(k, saved[k]);
-    if (Object.keys(saved).length) relayout();
-    panel.addEventListener('input', (e) => {
-      const i = e.target; if (!i.dataset.k) return;
-      saved[i.dataset.k] = Number(i.value); set(i.dataset.k, i.value);
-      sessionStorage.setItem('tune-values', JSON.stringify(saved)); relayout();
-    });
-    panel.querySelector('[data-reset]').addEventListener('click', () => {
-      for (const k of Object.keys(defaults)) { root.style.removeProperty(`--${k}`); delete saved[k]; const i = panel.querySelector(`[data-k="${k}"]`); i.value = defaults[k]; i.nextElementSibling.textContent = `${defaults[k]}px`; }
-      sessionStorage.removeItem('tune-values'); relayout();
-    });
-  }
 
   // ---- index (list) view --------------------------------------------------------
   const listView = (() => {
