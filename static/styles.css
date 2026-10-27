@@ -123,8 +123,11 @@
     --seg-active: #111;
     --seg-active-ink: #fff;
     --seg-ink: rgba(17, 17, 17, .75);
+    /* the grid logo is blended with `difference`, which maps the group's white to dark and
+       its black to light over the page (and the reverse over dark tiles). The dots must be
+       the disc's opposite inside the group, or they vanish into it and leave a plain disc. */
     --logo-disc: #fff;
-    --logo-dots: #fff;
+    --logo-dots: #000;
     --logo-slash: #fff;
     --fade-on: 0;
     --focus: #111;
@@ -133,7 +136,11 @@
 
 /* ---- base ---------------------------------------------------------------------- */
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; background: var(--bg); }
+/* The gutter is always reserved: the grid locks scrolling and Index/Info scroll, so without it
+   a classic scrollbar appears on every switch, narrows the viewport by its width and jerks the
+   right-anchored controls (and the lightbox) sideways mid-animation. Overlay scrollbars take no
+   space, so on them this changes nothing. */
+html { -webkit-text-size-adjust: 100%; background: var(--bg); scrollbar-gutter: stable; }
 body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink); font: var(--font-weight) 16px/1.2 var(--font-family); letter-spacing: -.01em; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 /* iOS starts a page-wide text selection from a long press on unselectable content, which
    then fights the pan; so nothing is selectable unless a view opts its text back in */
@@ -164,13 +171,19 @@ svg { display: block; }
   .logo { color: #fff; mix-blend-mode: difference; }
   body:not([data-view="grid"]) .logo, body.lb-open .logo { mix-blend-mode: normal; color: var(--ink); }
   body:not([data-view="grid"]) .logo__disc, body.lb-open .logo__disc { fill: #111; }
+  body:not([data-view="grid"]) .logo__dots, body.lb-open .logo__dots { fill: #fff; }
   body:not([data-view="grid"]) .logo__word i, body.lb-open .logo__word i { color: var(--ink-40); }
 }
 body.lb-open .logo { opacity: 0; pointer-events: none; }
 
 /* ---- view transitions: outgoing fades, incoming rises -------------------------- */
 .grid.is-leaving, .list.is-leaving, .info.is-leaving { opacity: 0; transition: opacity .15s ease; pointer-events: none; }
-.grid.is-entering, .list.is-entering, .info.is-entering { animation: view-in .4s var(--ease-out) both; }
+.grid.is-entering, .info.is-entering { animation: view-in .4s var(--ease-out) both; }
+/* The Index section itself never transforms: a transform would make it the containing block
+   for its fixed children (the hover preview card and bottom fade), and the card, still holding
+   the translate from the last row hover, would widen the document and flash a horizontal
+   scrollbar that lifts the fixed bottom nav. Its head and table rise instead. */
+.list.is-entering > .list__head, .list.is-entering > .table { animation: view-in .4s var(--ease-out) both; }
 @keyframes view-in { from { opacity: 0; transform: translateY(10px); } }
 .grid.is-entering { animation-name: view-fade; }
 @keyframes view-fade { from { opacity: 0; } }
@@ -206,7 +219,12 @@ body.lb-open .canvas .tile:not(.is-hover) { opacity: .5; }
 
 /* ---- dock (filter) ------------------------------------------------------------- */
 .dock { position: fixed; z-index: 40; left: var(--edge); bottom: var(--edge); }
-.dock__btn { display: flex; align-items: center; gap: 12px; padding: 8px 18px 8px 8px; border-radius: var(--r-dock); background: var(--glass-dock); box-shadow: var(--glass-shadow); text-align: left; transition: opacity .2s ease, transform .2s ease; }
+/* The glass lives on a pseudo-element so a hover can scale the background alone, hinting that
+   the button opens something, while the thumb and text stay put. The button keeps a
+   transparent 1px border so its box is unchanged; the pseudo overlaps it with inset -1px. */
+.dock__btn { position: relative; isolation: isolate; display: flex; align-items: center; gap: 12px; padding: 8px 18px 8px 8px; border-radius: var(--r-dock); background: none; border-color: transparent; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; text-align: left; transition: opacity .2s ease, transform .2s ease; }
+.dock__btn::before { content: ""; position: absolute; inset: -1px; z-index: -1; border-radius: inherit; background: var(--glass-dock); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); -webkit-backdrop-filter: blur(var(--glass-blur)); backdrop-filter: blur(var(--glass-blur)); transition: transform .25s var(--ease-out); }
+@media (hover: hover) { .dock__btn:hover::before { transform: scale(1.04); } }
 .dock__thumb { width: 40px; height: 40px; border-radius: 9px; overflow: hidden; background: var(--tile-bg); flex: none; }
 .dock__thumb img { width: 100%; height: 100%; object-fit: cover; }
 .dock__text { display: flex; flex-direction: column; gap: 1px; }
@@ -243,15 +261,13 @@ body.lb-open .canvas .tile:not(.is-hover) { opacity: .5; }
 .views { position: fixed; z-index: 40; right: var(--edge); bottom: var(--edge); display: flex; align-items: center; height: 58px; }
 .views.is-open .views__btn { opacity: 0; pointer-events: none; transform: scale(.96); }
 .seg { position: relative; display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 10px; }
-.seg__pill { position: absolute; z-index: 0; top: 4px; left: 0; height: 28px; width: 0; border-radius: 7px; background: var(--seg-active); opacity: 0; transition: transform .3s var(--ease-pill); }
-.seg--sort .seg__pill { transition: transform .3s var(--ease-pill), width .3s var(--ease-pill); }
+/* The items are icon-only and never resize, so the pill simply slides between them. */
+.seg__pill { position: absolute; z-index: 0; top: 4px; left: 0; height: 28px; width: 0; border-radius: 7px; background: var(--seg-active); opacity: 0; transition: transform .3s var(--ease-pill), width .3s var(--ease-pill); }
 .seg.is-ready .seg__pill { opacity: 1; }
-.seg__item { position: relative; z-index: 1; display: flex; align-items: center; gap: 0; height: 28px; padding: 6px 9px; border-radius: 7px; color: var(--seg-ink); font-size: 12px; line-height: 1.2; white-space: nowrap; transition: color .3s var(--ease-pill), padding .3s var(--ease-pill); }
+.seg__item { position: relative; z-index: 1; display: flex; align-items: center; gap: 0; height: 28px; padding: 6px 9px; border-radius: 7px; color: var(--seg-ink); font-size: 12px; line-height: 1.2; white-space: nowrap; transition: color .12s ease .15s; }
 .seg__item svg { flex: none; }
-.seg__label { display: block; max-width: 0; opacity: 0; overflow: hidden; margin-left: 0; transition: max-width .3s var(--ease-pill), opacity .2s ease, margin .3s var(--ease-pill); }
-.seg__item.is-active { color: var(--seg-active-ink); background: var(--seg-active); padding-right: 11px; }
+.seg__item.is-active { color: var(--seg-active-ink); background: var(--seg-active); }
 .seg.is-ready .seg__item.is-active { background: transparent; }
-.seg__item.is-active .seg__label { max-width: 60px; opacity: 1; margin-left: 6px; }
 .seg__item:not(.is-active):hover { color: var(--ink); }
 .views__btn { display: none; position: relative; width: 52px; height: 52px; border-radius: 14px; background: var(--glass-dock); box-shadow: var(--glass-shadow); color: var(--ink); transition: opacity .2s ease, transform .2s ease; }
 .views__icon { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; animation: icon-in .25s var(--ease-out) both; }
@@ -270,7 +286,6 @@ body[data-view="grid"] .views__icon[data-view-icon="grid"], body[data-view="list
 .seg--sort { padding: 3px; border-radius: 12px; margin-bottom: 6px; }
 .seg--sort .seg__pill { top: 3px; height: 26px; border-radius: 9px; }
 .seg--sort .seg__item { height: 26px; padding: 6px 10px; border-radius: 9px; }
-.seg--sort .seg__item.is-active { padding-right: 10px; }
 .table { display: flex; flex-direction: column; }
 .table__head, .row { display: grid; grid-template-columns: 72px minmax(0, 3fr) 2fr 1.7fr 2.6fr 100px 24px; align-items: center; column-gap: 0; }
 .table__head { padding: 0 0 12px; font-size: 12px; color: var(--ink-40); border-bottom: 1px solid var(--line); }
@@ -329,6 +344,11 @@ body.lb-open .canvas, body.lb-open .list, body.lb-open .info { filter: blur(var(
 body.lb-open .canvas, body.lb-open .list, body.lb-open .info { transition: filter .5s ease-in; }
 body.lb-open .dock, body.lb-open .views { opacity: 0; pointer-events: none; }
 body[data-noblur] .canvas, body[data-noblur] .list, body[data-noblur] .info { filter: none !important; }
+/* Safari A/B flags (see main.js): what the page costs without its glass and hover effects */
+body[data-noglass] .glass, body[data-noglass] .dock__btn::before, body[data-noglass] .tile__label, body[data-noglass] .lb__card, body[data-noglass] .lb__close, body[data-noglass] .lb__arrow, body[data-noglass] .lb__strip { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+body[data-noglass] .logo { mix-blend-mode: normal !important; }
+body[data-nohover] .tile.is-hover { transform: none !important; box-shadow: none !important; }
+body[data-squarevideo] .tile:has(video) { border-radius: 0 !important; }
 #diag { position: fixed; left: 8px; top: 8px; z-index: 999; padding: 4px 8px; border-radius: 6px; background: #c00; color: #fff; font: 12px/1.4 monospace; pointer-events: none; }
 .dock, .views { transition: opacity .25s ease; }
 .lb__stage { position: absolute; inset: 24px; touch-action: pan-y; }
@@ -338,8 +358,8 @@ body[data-noblur] .canvas, body[data-noblur] .list, body[data-noblur] .info { fi
 .lb__media { position: absolute; left: 0; top: 0; border-radius: var(--r-lb); overflow: hidden; }
 .lb__media > img, .lb__media > video, .lb__media > .lb__layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .lb__layer > img, .lb__layer > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: inherit; }
-.lb__layer > video { opacity: 0; transition: opacity .25s ease; }
-.lb__layer.is-ready > video { opacity: 1; }
+.lb__layer > .lb__hi { opacity: 0; transition: opacity .25s ease; }   /* the master, over the adopted proxy or thumbnail */
+.lb__layer.is-ready > .lb__hi { opacity: 1; }
 /* only while the box is in flight (open/close) does the picture fill it edge to edge */
 .lb__media.is-flipping > img, .lb__media.is-flipping > video, .lb__media.is-flipping > .lb__layer { object-fit: cover; }
 .lb__media .tile__ph { font-size: 14px; padding: 20px 24px; }
@@ -417,7 +437,7 @@ body[data-view="grid"].lenis-stopped, html.lenis body[data-view="grid"] { height
   .logo__word { font-size: 15px; }
   .grid__fade--t { height: 130px; } .grid__fade--b { height: 150px; } .grid__fade--l, .grid__fade--r { width: 32px; }
   .dock, .views { bottom: max(var(--edge), calc(env(safe-area-inset-bottom) + 12px)); }
-  .dock__btn { padding: 8px 14px 8px 8px; background: var(--glass-dock); }
+  .dock__btn { padding: 8px 14px 8px 8px; }
   .dock__count { display: none; }
   .sheet { width: 250px; background: var(--glass-sheet-m); }
   .sheet--view { width: 220px; }

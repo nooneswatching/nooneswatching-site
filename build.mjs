@@ -116,7 +116,7 @@ const VIEWS = [['grid', 'Grid', '/'], ['list', 'Index', '/list'], ['info', 'Info
 const views = (active) => `<div class="views" id="views">
   <nav class="seg glass" aria-label="View">
     <span class="seg__pill" aria-hidden="true"></span>
-${VIEWS.map(([id, label, href]) => `    <a class="seg__item${id === active ? ' is-active' : ''}" href="${href}" data-view-link="${id}" aria-label="${label}" title="${label}"${id === active ? ' aria-current="page"' : ''}>${I[id === 'list' ? 'index' : id]}<span class="seg__label">${label}</span></a>`).join('\n')}
+${VIEWS.map(([id, label, href]) => `    <a class="seg__item${id === active ? ' is-active' : ''}" href="${href}" data-view-link="${id}" aria-label="${label}" title="${label}"${id === active ? ' aria-current="page"' : ''}>${I[id === 'list' ? 'index' : id]}</a>`).join('\n')}
   </nav>
   <button type="button" class="views__btn glass" id="views-btn" aria-expanded="false" aria-controls="view-sheet" aria-label="View">
 ${VIEWS.map(([id]) => `    <span class="views__icon" data-view-icon="${id}">${I[id === 'list' ? 'index' : id]}</span>`).join('\n')}
@@ -294,7 +294,9 @@ const ver = (url) => {
   const h = hashes.get(clean);
   return h ? `${clean}?v=${h}` : clean;
 };
-const versioned = (html) => html.replace(/\/assets\/[^"'\s)<\\?]+/g, (m) => ver(m));
+// main.js and styles.css are versioned the same way: Safari in particular keeps serving a
+// cached script for an un-versioned URL with no cache headers
+const versioned = (html) => html.replace(/\/(?:assets\/[^"'\s)<\\?]+|styles\.css|main\.js)(?=["'\s)<?])/g, (m) => ver(m));
 for (const [f, html] of Object.entries(out)) writeFileSync(`${OUT}/${f}`, versioned(html));
 copyDir('static', OUT);
 console.log(`Built ${Object.keys(out).length} pages -> ${OUT}/ (${assets.length} pieces, ${projects.length} projects)`);

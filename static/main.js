@@ -21,7 +21,11 @@
   // Diagnostics for devices I cannot run: ?noblur drops the blur behind the lightbox,
   // ?diag shows the longest frame of each open/close zoom. Both stick for the tab.
   const flags = new URLSearchParams(location.search);
-  for (const f of ['noblur', 'diag']) { if (flags.has(f)) { if (flags.get(f) === '0') sessionStorage.removeItem(f); else sessionStorage.setItem(f, '1'); } if (sessionStorage.getItem(f)) document.body.dataset[f] = ''; }
+  const BENCH = flags.has('bench');                      // read now: push() rewrites the URL on init
+  // ?novideo: tiles never create clips. ?noglass: no backdrop blurs or blend modes. ?nohover: no
+  // tile hover lift/shadow. Each sticks for the tab; ?flag=0 clears it. Safari A/B.
+  // ?squarevideo: video tiles lose their rounded corners (WebKit masks video layers to clip them)
+  for (const f of ['noblur', 'diag', 'novideo', 'noglass', 'nohover', 'squarevideo']) { if (flags.has(f)) { if (flags.get(f) === '0') sessionStorage.removeItem(f); else sessionStorage.setItem(f, '1'); } if (sessionStorage.getItem(f)) document.body.dataset[f] = ''; }
   const diag = (msg) => { if (!('diag' in document.body.dataset)) return; let d = document.getElementById('diag'); if (!d) { d = document.createElement('div'); d.id = 'diag'; document.body.appendChild(d); } d.textContent = msg; };
   const phone = matchMedia('(max-width: 809px)');
   const hoverable = matchMedia('(hover: hover)').matches;
@@ -78,19 +82,13 @@
     const r = a.getBoundingClientRect(), d = segEl.getBoundingClientRect();
     if (!animate) pill.style.transition = 'none';
     pill.style.width = `${r.width}px`;
-    pill.style.transform = `translateX(${r.left - d.left}px)`;
+    pill.style.transform = `translateX(${r.left - d.left - segEl.clientLeft}px)`;
     if (!animate) { void pill.offsetWidth; pill.style.transition = ''; }
   };
   const readySeg = (segEl) => {
     placePill(segEl, false);
     segEl.classList.add('is-ready');
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => placePill(segEl, false));
-    // the active label grows and the inactive one shrinks over 300ms: keep the pill glued
-    // to the segments while they resize (width follows instantly, transform eases)
-    if (window.ResizeObserver) {
-      const ro = new ResizeObserver(() => placePill(segEl));
-      segEl.querySelectorAll('.seg__item').forEach((i) => ro.observe(i));
-    }
   };
 
   // ---- view crossfade ----------------------------------------------------------
@@ -225,7 +223,7 @@
       this.tiles = new Map();
       this.ids = [];
       this.tx = 0; this.ty = 0; this.vx = 0; this.vy = 0;
-      this.paused = false; this.raf = 0; this.dirty = true;
+      this.paused = false; this.raf = 0; this.dirty = true; this.dragging = false;
       this.enterUntil = 0; this.gen = 0;
       this.metrics();
       this.bind();
@@ -312,12 +310,13 @@
         if (e.button !== 0 && e.pointerType === 'mouse') return;
         down = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, t: performance.now(), moved: false, id: e.pointerId, samples: [], tile: e.target.closest('.tile') };
         this.vx = this.vy = 0;
-        root.setPointerCapture(e.pointerId);
+        try { root.setPointerCapture(e.pointerId); } catch (_) {}   // ?bench drives this with a synthetic pointer
       });
       root.addEventListener('pointermove', (e) => {
         if (!down || e.pointerId !== down.id) return;
+        down.moves = (down.moves || 0) + 1;
         const dx = e.clientX - down.lx, dy = e.clientY - down.ly;
-        if (!down.moved && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) { down.moved = true; root.classList.add('is-dragging'); this.clearHover(); }
+        if (!down.moved && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) { down.moved = true; this.dragging = true; this._dragT0 = performance.now(); root.classList.add('is-dragging'); this.clearHover(); }
         if (!down.moved) return;
         down.lx = e.clientX; down.ly = e.clientY;
         this.tx += dx; this.ty += dy; this.dirty = true;
@@ -328,7 +327,17 @@
       const up = (e) => {
         if (!down || e.pointerId !== down.id) return;
         root.classList.remove('is-dragging');
+        this.dragging = false; this.dirty = true;          // one more render: videos held back during the drag start now
         const d = down; down = null;
+        d.end = { type: e.type, ms: Math.round(performance.now() - d.t), dist: Math.round(Math.hypot(e.clientX - d.x, e.clientY - d.y)), moves: d.moves || 0, pointer: e.pointerType };
+        if (d.moved && 'diag' in document.body.dataset) setTimeout(() => {
+          const t0 = this._dragT0, tUp = performance.now() - 1500;
+          const frames = (this._hist || []).filter(([t]) => t >= t0), drag = frames.filter(([t]) => t <= tUp).map(([, x]) => x), glide = frames.filter(([t]) => t > tUp).map(([, x]) => x);
+          const st = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return { n: a.length, avg: +(a.reduce((p, c) => p + c, 0) / a.length).toFixed(1), p95: +s[Math.floor(s.length * .95)].toFixed(0), worst: +s[s.length - 1].toFixed(0), over50: a.filter((x) => x > 50).length }; };
+          const r = { real: true, end: d.end, drag: st(drag), glide: st(glide), clips: this.layer.querySelectorAll('video').length, tiles: this.tiles.size, flags: Object.keys(document.body.dataset).join(',') };
+          diag(`${d.end.type} after ${d.end.ms}ms, ${d.end.moves} moves, ${d.end.dist}px | worst frame ${r.drag && r.drag.worst}ms | clips ${r.clips}`);
+          fetch('/__bench', { method: 'POST', body: JSON.stringify({ ua: navigator.userAgent, w: innerWidth, h: innerHeight, dpr: devicePixelRatio, ...r }) }).catch(() => {});
+        }, 1500);
         if (d.moved) {
           const now = performance.now();
           const recent = d.samples.filter((s) => now - s.t < 100);
@@ -414,7 +423,7 @@
         el.innerHTML = `<span class="tile__ph">${esc(m.label || a.title)}</span>`;
       } else if (m.type === 'video') {
         el.innerHTML = `<img src="${m.thumb}" alt="" loading="lazy" decoding="async">`;
-        el.dataset.video = m.src;
+        el.dataset.video = m.tile || m.src;           // the 640px proxy; the lightbox plays the master
       } else {
         el.innerHTML = `<img src="${m.thumb}" alt="${esc(a.title)}" loading="lazy" decoding="async">`;
       }
@@ -460,17 +469,27 @@
       if (frag.childNodes.length) this.layer.appendChild(frag);
       for (const [key, el] of this.tiles) if (!keep.has(key)) { if (el === this.hover) this.clearHover(); this.stopVideo(el); el.remove(); this.tiles.delete(key); }
       this.layer.style.transform = `translate3d(${this.tx}px,${this.ty}px,0)`;
-      // play videos that are actually in view
+      // play videos that are actually in view. New clips are only created once the drag has
+      // settled (pointer up and the glide nearly over): spinning up a decoder mid-gesture is
+      // what stalls Safari. Clips already playing carry on through the drag.
+      const settled = !this.dragging && Math.hypot(this.vx, this.vy) < 1;
+      let budget = 1;                                       // at most one new clip per frame: no burst stall on release
       for (const el of this.tiles.values()) {
-        if (!el.dataset.video) continue;
+        if (!el.dataset.video || 'novideo' in document.body.dataset) continue;
         const x = parseFloat(el.style.left) + this.tx, y = parseFloat(el.style.top) + this.ty, h = parseFloat(el.style.height);
         const inView = x + this.w > 0 && x < this.vw && y + h > 0 && y < this.vh;
-        if (inView && !this.paused && !document.hidden) this.startVideo(el); else { const v = el.querySelector('video'); if (v) v.pause(); if (!inView) this.stopVideo(el); }
+        if (inView && !this.paused && !document.hidden) { if (settled && !el.querySelector('video')) { if (budget > 0) { budget--; this.startVideo(el); } else this.dirty = true; } } else { const v = el.querySelector('video'); if (v) v.pause(); if (!inView) this.stopVideo(el); }
       }
     }
     loop() {
       this.raf = requestAnimationFrame(this.loop);
       if (this.paused) return;
+      if ('diag' in document.body.dataset) {
+        const now = performance.now(), dt = now - (this._last || now); this._last = now;
+        this._worst = Math.max(this._worst || 0, dt); this._sum = (this._sum || 0) + dt; this._n = (this._n || 0) + 1;
+        (this._hist || (this._hist = [])).push([now, dt]); if (this._hist.length > 600) this._hist.splice(0, this._hist.length - 600);
+        if (now - (this._rep || 0) > 500) { this._rep = now; diag(`frame avg ${(this._sum / this._n).toFixed(1)}ms, worst ${Math.round(this._worst)}ms, clips ${this.layer.querySelectorAll('video').length}, tiles ${this.tiles.size}`); this._worst = 0; this._sum = 0; this._n = 0; }
+      }
       if (Math.abs(this.vx) > .05 || Math.abs(this.vy) > .05) {
         this.tx += this.vx; this.ty += this.vy;
         this.vx *= .94; this.vy *= .94;
@@ -656,18 +675,34 @@
       const m = a.media;
       if (m.type === 'placeholder') { const ph = document.createElement('span'); ph.className = 'tile__ph'; ph.textContent = m.label || a.title; return ph; }
       if (m.type === 'video') {
-        const tv = tile && tile.querySelector('video');
-        if (tv) { tv._adoptedId = a.id; const pl = tv.play(); if (pl && pl.catch) pl.catch(() => {}); return tv; } // reparenting pauses it
+        // The tile's clip is the 640px grid proxy. Adopted, it is the very pixels that fly up,
+        // so the open is seamless; the master then fades in over it, picking up at the same
+        // moment of the loop. Without a tile (deep link, filmstrip) the thumbnail stands in.
         // A fresh clip paints nothing on iOS until it has loaded (or paints its poster at the
-        // wrong size), so the layer shows the thumbnail at once and fades the clip in over it.
+        // wrong size), which is why something always sits underneath.
         const layer = document.createElement('div');
         layer.className = 'lb__layer';
-        const still = document.createElement('img');
-        still.alt = ''; still.decoding = 'sync'; still.src = m.thumb || m.poster;
+        const tv = tile && tile.querySelector('video');
+        let under;
+        if (tv) { tv._adoptedId = a.id; under = tv; const pl = tv.play(); if (pl && pl.catch) pl.catch(() => {}); } // reparenting pauses it
+        else { under = document.createElement('img'); under.alt = ''; under.decoding = 'sync'; under.src = m.thumb || m.poster; }
         const v = document.createElement('video');
-        v.src = m.src; v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true; v.preload = 'auto'; v.setAttribute('muted', '');
-        v.addEventListener('loadeddata', () => { layer.classList.add('is-ready'); setTimeout(() => still.remove(), 400); }, { once: true });
-        layer.append(still, v);
+        v.className = 'lb__hi';
+        v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true; v.preload = 'auto'; v.setAttribute('muted', '');
+        let done = false;
+        const ready = () => { if (done) return; done = true; layer.classList.add('is-ready'); if (!tv) setTimeout(() => under.remove(), 400); };
+        // Fade the master in only once a frame of it has actually been presented. Safari fires
+        // loadeddata/canplay (and canplay after a seek) before it has painted anything, which
+        // showed as a black or mis-sized flash over the proxy. rVFC is the honest signal.
+        const armReady = () => { if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(() => ready()); else v.addEventListener('playing', () => requestAnimationFrame(ready), { once: true }); };
+        // pick the clip up at the proxy's moment of the loop; a seek to ~0 is no seek at all
+        if (tv) v.addEventListener('loadedmetadata', () => { const t = tv.currentTime; if (t > 0.05) { v.addEventListener('seeked', armReady, { once: true }); try { v.currentTime = t; } catch (_) { armReady(); } } else armReady(); }, { once: true });
+        else armReady();
+        setTimeout(ready, 6000);                              // never leave the master invisible
+        // With an adopted tile clip the master's load waits until the zoom flight has landed
+        // (420ms): spinning up a 4K decoder in the flight's first frames made it hitch.
+        setTimeout(() => { if (layer.isConnected) v.src = m.src; }, tv ? 450 : 0);
+        layer.append(under, v);
         return layer;
       }
       const img = document.createElement('img');
@@ -1030,4 +1065,47 @@
   push(true);
   phone.addEventListener('change', () => { if (seg) placePill(seg, false); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (seg) placePill(seg, false); });
+
+  // ---- ?bench: the page measures its own grid drag ---------------------------------
+  // For browsers I cannot drive (Safari). Each variant: set the A/B flags at runtime, let
+  // the grid settle, drag the canvas with synthetic pointer events for ~600ms, let it glide,
+  // and record every animation frame's duration meanwhile. Results go to the dev server
+  // (POST /__bench, printed in its log) and into the ?diag readout.
+  if (BENCH && state.view === 'grid') {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const root = $('canvas');
+    const ev = (type, x, y) => root.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 7, pointerType: 'mouse', isPrimary: true, button: 0, buttons: type === 'pointerup' ? 0 : 1, clientX: x, clientY: y }));
+    const stat = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return { n: a.length, avg: +(a.reduce((p, c) => p + c, 0) / a.length).toFixed(1), p95: +s[Math.floor(s.length * .95)].toFixed(0), worst: +s[s.length - 1].toFixed(0), over50: a.filter((x) => x > 50).length }; };
+    const variants = [['base', []], ['novideo', ['novideo']], ['noglass', ['noglass']], ['nohover', ['nohover']], ['all', ['novideo', 'noglass', 'nohover']]];
+    (async () => {
+      await sleep(2500);
+      const out = [];
+      for (const [name, flags] of variants) {
+        for (const f of ['novideo', 'noglass', 'nohover']) { if (flags.includes(f)) body.dataset[f] = ''; else delete body.dataset[f]; }
+        if (flags.includes('novideo')) for (const el of canvas.tiles.values()) canvas.stopVideo(el);
+        canvas.dirty = true;
+        await sleep(2000);                                   // clips (re)start, hover state clears
+        const clipsBefore = root.querySelectorAll('video').length;
+        const frames = []; let last = 0, on = true;
+        const tick = (now) => { if (last) frames.push(now - last); last = now; if (on) requestAnimationFrame(tick); };
+        requestAnimationFrame(tick);
+        await sleep(300);
+        const dragStart = frames.length;
+        let x = Math.round(innerWidth * .7), y = Math.round(innerHeight * .5);
+        ev('pointerdown', x, y);
+        for (let i = 0; i < 36; i++) { await new Promise((r) => requestAnimationFrame(r)); x -= 18; y += Math.round(Math.sin(i / 5) * 2); ev('pointermove', x, y); }
+        ev('pointerup', x, y);
+        const dragEnd = frames.length;
+        await sleep(1800);                                   // glide, then deferred clip start-up
+        on = false;
+        const r = { variant: name, drag: stat(frames.slice(dragStart, dragEnd)), glide: stat(frames.slice(dragEnd)), clipsBefore, clipsAfter: root.querySelectorAll('video').length, tiles: canvas.tiles.size };
+        out.push(r);
+        diag(`${name}: drag worst ${r.drag && r.drag.worst}ms avg ${r.drag && r.drag.avg}ms | glide worst ${r.glide && r.glide.worst}ms | clips ${clipsBefore}->${r.clipsAfter}`);
+        fetch('/__bench', { method: 'POST', body: JSON.stringify({ ua: navigator.userAgent, w: innerWidth, h: innerHeight, dpr: devicePixelRatio, ...r }) }).catch(() => {});
+      }
+      for (const f of ['novideo', 'noglass', 'nohover']) delete body.dataset[f];
+      canvas.dirty = true;
+      fetch('/__bench', { method: 'POST', body: JSON.stringify({ done: true, summary: out.map((r) => `${r.variant}: drag worst ${r.drag && r.drag.worst} avg ${r.drag && r.drag.avg} over50 ${r.drag && r.drag.over50} | glide worst ${r.glide && r.glide.worst}`) }) }).catch(() => {});
+    })();
+  }
 })();

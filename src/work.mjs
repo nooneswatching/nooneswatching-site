@@ -241,7 +241,7 @@ export function buildCatalogue(manifest = {}) {
     const dims = manifest[m.id] || {};
     const out = { type: m.type, src: m.src || null, width: dims.width || 1600, height: dims.height || 1200, bg: m.bg || null, label: m.label || null };
     if (m.type !== 'placeholder') out.thumb = `/assets/thumb/${m.id}.jpg`;
-    if (m.type === 'video') out.poster = `/assets/poster/${m.id}.jpg`;
+    if (m.type === 'video') { out.poster = `/assets/poster/${m.id}.jpg`; out.tile = `/assets/tile/${m.id}.mp4`; } // tile: 640px grid proxy; src stays the master
     return out;
   };
 

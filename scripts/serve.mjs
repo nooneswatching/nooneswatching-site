@@ -32,6 +32,8 @@ async function resolve(urlPath) {
 
 createServer(async (req, res) => {
   let path = new URL(req.url, 'http://x').pathname;
+  // ?bench in main.js posts frame-time results here; they show up in this server's log
+  if (req.method === 'POST' && path === '/__bench') { let b = ''; req.on('data', (c) => { b += c; }); req.on('end', () => { console.log(`[bench] ${b}`); res.writeHead(204); res.end(); }); return; }
   if (REDIRECTS[path]) { res.writeHead(308, { Location: REDIRECTS[path] }); return res.end(); }
   for (const [re, to] of REWRITES) path = path.replace(re, to);
   const file = await resolve(path);
