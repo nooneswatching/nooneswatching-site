@@ -854,6 +854,7 @@
 
     // controls
     $('lb-close').addEventListener('click', () => close());
+    el.querySelector('.lb__bg').addEventListener('click', () => { if (cur?.cardOpen && isPhone()) setCard(false); else close(); });
     $('lb-prev').addEventListener('click', () => step(-1));
     $('lb-next').addEventListener('click', () => step(1));
     $('lb-mprev').addEventListener('click', () => step(-1));
@@ -880,7 +881,10 @@
       const dx = e.clientX - sw.x, dy = e.clientY - sw.y, dt = performance.now() - sw.t;
       sw = null;
       if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 600 && e.pointerType === 'touch') { step(dx < 0 ? 1 : -1); return; }
-      if (Math.hypot(dx, dy) < 8 && isPhone() && cur?.cardOpen) setCard(false);
+      if (Math.hypot(dx, dy) < 8) {
+        if (cur?.cardOpen) { if (isPhone()) setCard(false); return; }
+        if (!e.target.closest('.lb__media')) close(); // tap beside the asset closes
+      }
     });
     // swipe the tray down to close it
     let ty = null;
