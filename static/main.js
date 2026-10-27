@@ -12,6 +12,8 @@
   // Open question from the brief: when a filtered set is small, keep tiling it
   // infinitely (true) or show a finite, centred canvas (false).
   const REPEAT_SMALL_SETS = true;
+  // How far neighbouring tiles get pushed when a tile opens (px, before distance falloff).
+  const PUSH = 90, PUSH_PHONE = 56;
 
   const body = document.body;
   const $ = (id) => document.getElementById(id);
@@ -461,6 +463,32 @@
     }
     pause() { this.paused = true; this.pauseVideos(); }
     resume() { if (!this.paused) return; this.paused = false; this.metrics(); this.dirty = true; }
+    // Neighbours get nudged away from the tile that opens (strongest close by, fading
+    // with distance, slight overshoot) and settle back when the lightbox closes.
+    push(source) {
+      if (reduced || !source) return;
+      const sr = source.getBoundingClientRect();
+      const sx = sr.left + sr.width / 2, sy = sr.top + sr.height / 2;
+      const max = isPhone() ? PUSH_PHONE : PUSH;
+      const reach = Math.max(this.vw, this.vh) * 0.55;
+      this.pushed = [];
+      for (const el of this.tiles.values()) {
+        if (el === source) continue;
+        const r = el.getBoundingClientRect();
+        const dx = r.left + r.width / 2 - sx, dy = r.top + r.height / 2 - sy;
+        const d = Math.hypot(dx, dy) || 1;
+        const k = max * Math.exp(-d / reach);
+        el.style.transition = 'transform .6s cubic-bezier(.2, .9, .25, 1.08)';
+        el.style.transform = `translate(${(dx / d * k).toFixed(1)}px, ${(dy / d * k).toFixed(1)}px)`;
+        this.pushed.push(el);
+      }
+    }
+    release() {
+      if (!this.pushed) return;
+      const els = this.pushed; this.pushed = null;
+      els.forEach((el) => { el.style.transition = 'transform .5s cubic-bezier(.22, 1, .36, 1)'; el.style.transform = ''; });
+      setTimeout(() => els.forEach((el) => { if (!el.style.transform) el.style.transition = ''; }), 550);
+    }
     tileFor(id) {
       // the on-screen tile closest to the centre for this asset (for FLIP)
       let best = null, bd = Infinity;
@@ -632,7 +660,7 @@
       if (old) {
         if (!reduced) { old.style.transition = 'opacity .2s ease'; old.style.opacity = '0'; setTimeout(() => old.remove(), 200); } else old.remove();
       }
-      if (fromTile && !reduced) flipIn(fromTile);
+      if (fromTile && !reduced) { flipIn(fromTile); canvas.push(fromTile); }
       else if (!reduced && old) { media.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease' }); }
       document.title = `${p ? p.title : a.title} · NO/ONES/WATCHING`;
     }
@@ -697,6 +725,7 @@
       el.classList.remove('is-idle', 'is-card-open', 'is-hidden');
       state.open = null;
       body.classList.remove('lb-open');
+      canvas.release();
       const finish = () => {
         el.hidden = true;
         if (media) { media.remove(); media = null; }

@@ -169,7 +169,7 @@ body.lb-open .logo { opacity: 0; pointer-events: none; }
 @keyframes view-fade { from { opacity: 0; } }
 
 /* ---- grid canvas --------------------------------------------------------------- */
-.grid { position: fixed; inset: 0; overflow: hidden; background: var(--bg); }
+.grid { position: fixed; inset: 0; overflow: hidden; background: var(--bg); transition: filter .45s ease; }
 body:not([data-view="grid"]) .grid { display: none; }
 .canvas { position: absolute; inset: 0; cursor: grab; touch-action: none; overscroll-behavior: none; user-select: none; -webkit-user-select: none; }
 .canvas.is-dragging { cursor: grabbing; }
