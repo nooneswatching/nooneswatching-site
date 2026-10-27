@@ -181,7 +181,7 @@ body.lb-open .canvas .tile:not(.is-hover) { opacity: .5; }
 .canvas__layer { position: absolute; left: 0; top: 0; will-change: transform; }
 .tile { position: absolute; left: 0; top: 0; width: var(--tw); height: var(--th); border-radius: var(--r-tile); overflow: hidden; background: var(--tile-bg); color: var(--ink); transform-origin: center; -webkit-user-drag: none; transition: transform .3s var(--ease-out), opacity .3s ease, box-shadow .3s ease; }
 .tile > img, .tile > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; -webkit-user-drag: none; }
-.tile::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1.5px #fff; opacity: 0; transition: opacity .3s ease; pointer-events: none; }
+.tile::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--ink); opacity: 0; transition: opacity .3s ease; pointer-events: none; }
 .tile__ph { position: absolute; inset: 0; display: flex; align-items: flex-end; padding: 12px 14px; font-size: 12px; color: var(--ink-40); background: repeating-linear-gradient(135deg, transparent 0 10px, var(--tile-bg) 10px 11px); }
 .tile__label { position: absolute; left: 8px; bottom: 8px; display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; border-radius: 10px; background: rgba(28, 28, 30, .85); color: #fff; font-size: 13px; white-space: nowrap; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); opacity: 0; transform: translateY(4px); transition: opacity .2s ease, transform .2s ease; pointer-events: none; }
 .tile__label:not(:has(.tile__chip)) { padding-right: 12px; }
@@ -189,8 +189,7 @@ body.lb-open .canvas .tile:not(.is-hover) { opacity: .5; }
 @media (prefers-color-scheme: light) { .tile__label { background: rgba(255, 255, 255, .85); color: #111; } .tile__chip { background: rgba(17, 17, 17, .14); } }
 @media (hover: hover) and (min-width: 810px) {
   .tile.is-hover { z-index: 2; transform: scale(1.04); box-shadow: 0 24px 60px rgba(0, 0, 0, .45); }
-  .tile.is-hover::after, .tile.is-hover .tile__label { opacity: 1; }
-  .tile.is-hover .tile__label { transform: none; }
+  .tile.is-hover::after { opacity: .22; }   /* 1px ink stroke at 22%: a hint, not a frame */
 }
 /* repopulate: out = fade + shrink, in = fade + grow, staggered from the centre (main.js sets --d) */
 .tile.is-out { opacity: 0 !important; transform: scale(.94); transition: opacity .25s ease, transform .25s ease; }

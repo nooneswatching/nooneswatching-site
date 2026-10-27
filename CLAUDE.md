@@ -45,8 +45,8 @@ in `dist/` with its own title/OG tags; main.js reads `location` on boot.
 - Theme follows the device. No toggle. Edge fades on the canvas only in dark mode.
 - All UI is rounded rectangles, never pills or circles. PP Neue Montreal 400 for
   everything except the logo wordmark (500).
-- Labels on tiles appear only on hover. Hover lifts the tile and shows its label; it does
-  not dim the other tiles (that read as blinking). No always-on labels, no minimap, no recenter.
+- No labels on tiles. Hover (desktop) lifts the tile slightly and shows a faint 1px stroke;
+  it does not dim the other tiles (that read as blinking). No minimap, no recenter.
 - Filters are mutually exclusive; applying one repopulates the canvas (no dimming).
   `REPEAT_SMALL_SETS` in main.js is the open question (repeat vs finite canvas).
 - Lightbox: left/right walk the whole filmstrip first, then move on through the current
