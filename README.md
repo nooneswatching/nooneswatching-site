@@ -61,6 +61,8 @@ Everything is in `src/work.mjs`.
   to supply (renders as a labelled placeholder tile). Files live in
   `static/assets/img/<id>.<ext>` and `static/assets/video/<id>.mp4`.
 - `bg` on a media item is a backing colour for PNGs with transparency, nothing else.
+- Videos need square pixels. `npm run media` re-encodes any file that declares a sample
+  aspect ratio (Safari shows such clips squashed for a moment before it corrects them).
 - Disciplines are `brand`, `product`, `campaign`, `motion`, `web`.
 
 Then `npm run media` (if you added files) and `npm run build`. Counts, filters, the

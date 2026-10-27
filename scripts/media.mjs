@@ -6,7 +6,7 @@
 //   src/media-manifest.json          { id: { width, height } } for aspect ratios
 // Run it again after adding files to static/assets/{img,video}. Outputs are committed.
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, writeFileSync, renameSync } from 'node:fs';
 import { join, basename, extname } from 'node:path';
 import { projects, singles } from '../src/work.mjs';
 
@@ -19,8 +19,10 @@ const bgOf = {};
 for (const p of projects) for (const [m] of p.assets) if (m.bg) bgOf[m.id] = m.bg;
 for (const [m] of singles) if (m.bg) bgOf[m.id] = m.bg;
 
-// Display size. Several videos are stored with non-square pixels (sample aspect ratio),
-// e.g. 1440x1080 at 3:4 displays as a 1080x1080 square; browsers honour that, so must we.
+// Display size. Videos must use square pixels: Safari paints the first frames of a clip at
+// its stored size before it applies a sample aspect ratio, which shows as a squashed flash
+// in the lightbox. Re-encode any offender with squarePixels() below; the probe still applies
+// the ratio so sizes are right either way.
 const probe = (file) => {
   const out = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height,sample_aspect_ratio', '-of', 'csv=p=0', file]).toString().trim();
   const [w, h, sar] = out.split(',');
@@ -31,6 +33,13 @@ const probe = (file) => {
 // video frames resampled to square pixels before scaling
 const SQUARE = 'scale=iw*sar:ih,setsar=1';
 const ffmpeg = (args) => execFileSync('ffmpeg', ['-v', 'error', '-y', ...args]);
+const sarOf = (file) => execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=sample_aspect_ratio', '-of', 'csv=p=0', file]).toString().trim();
+// re-encode in place so the stored pixels are the displayed pixels
+const squarePixels = (file) => {
+  const tmp = `${file}.sq.mp4`;
+  ffmpeg(['-i', file, '-vf', "scale='trunc(iw*sar/2)*2':ih,setsar=1", '-c:v', 'libx264', '-crf', '20', '-preset', 'medium', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-an', tmp]);
+  renameSync(tmp, file);
+};
 
 const manifest = {};
 let made = 0;
@@ -52,6 +61,8 @@ for (const f of readdirSync(IMG)) {
 for (const f of readdirSync(VID)) {
   const id = basename(f, extname(f));
   const src = join(VID, f);
+  const sar = sarOf(src);
+  if (sar && sar !== '1:1' && sar !== 'N/A') { console.log(`${f}: non-square pixels (${sar}), re-encoding`); squarePixels(src); made++; }
   manifest[id] = probe(src);
   const poster = join(POSTER, `${id}.jpg`), thumb = join(THUMB, `${id}.jpg`);
   if (!existsSync(poster)) { ffmpeg(['-ss', '0.5', '-i', src, '-frames:v', '1', '-vf', `${SQUARE},scale=1280:-2`, '-q:v', '4', poster]); made++; }
