@@ -705,6 +705,8 @@
       const wasOpen = isOpen();
       if (!wasOpen) {
         pointerSeen = false;
+        // the close fades leave fill:forwards animations behind; clear them before reopening
+        [ui, el.querySelector('.lb__bg')].forEach((x) => x.getAnimations().forEach((a) => a.cancel()));
         lastFocus = document.activeElement;
         el.hidden = false;
         body.classList.add('lb-open');
@@ -731,6 +733,7 @@
       const finish = () => {
         el.hidden = true;
         if (media) { media.remove(); media = null; }
+        [ui, el.querySelector('.lb__bg')].forEach((x) => x.getAnimations().forEach((a) => a.cancel()));
         if (state.view === 'grid') canvas.resume(); else if (lenis) lenis.start();
         if (lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true }); else $('canvas').focus({ preventScroll: true });
       };
