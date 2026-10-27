@@ -78,14 +78,22 @@
     placePill(segEl, false);
     segEl.classList.add('is-ready');
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => placePill(segEl, false));
+    // the active label grows and the inactive one shrinks over 300ms: keep the pill glued
+    // to the segments while they resize (width follows instantly, transform eases)
+    if (window.ResizeObserver) {
+      const ro = new ResizeObserver(() => placePill(segEl));
+      segEl.querySelectorAll('.seg__item').forEach((i) => ro.observe(i));
+    }
   };
 
-  function setView(view, { push: doPush = true, scroll = true } = {}) {
-    const changed = state.view !== view;
+  // ---- view crossfade ----------------------------------------------------------
+  const sections = { grid: $('grid'), list: $('list'), info: $('info') };
+  let viewToken = 0;
+
+  function setView(view, { push: doPush = true, scroll = true, animate = true } = {}) {
+    const prev = state.view;
+    const changed = prev !== view;
     state.view = view;
-    body.dataset.view = view;
-    $('list').hidden = view !== 'list';
-    $('info').hidden = view !== 'info';
     document.querySelectorAll('[data-view-link]').forEach((el) => {
       const on = el.dataset.viewLink === view;
       if (el.classList.contains('seg__item') || el.classList.contains('sheet__row')) {
@@ -95,10 +103,28 @@
       }
     });
     if (seg) requestAnimationFrame(() => placePill(seg, changed));
-    if (view === 'grid') { if (lenis) lenis.stop(); canvas.resume(); }
-    else { if (lenis) lenis.start(); canvas.pause(); if (scroll && changed) scrollTop(); }
-    if (view === 'list') listView.refresh();
     document.title = view === 'grid' ? 'NO/ONES/WATCHING' : `${view === 'list' ? 'Index' : 'Info'} · NO/ONES/WATCHING`;
+    const token = ++viewToken;
+    const swap = () => {
+      if (token !== viewToken) return;
+      Object.values(sections).forEach((s) => s.classList.remove('is-leaving', 'is-entering'));
+      body.dataset.view = view;
+      sections.list.hidden = view !== 'list';
+      sections.info.hidden = view !== 'info';
+      if (view === 'grid') { if (lenis) lenis.stop(); canvas.resume(); }
+      else { if (lenis) lenis.start(); canvas.pause(); if (scroll && changed) scrollTop(); }
+      if (view === 'list') listView.refresh();
+      if (changed && animate && !reduced) {
+        const inc = sections[view];
+        inc.classList.add('is-entering');
+        inc.addEventListener('animationend', () => inc.classList.remove('is-entering'), { once: true });
+      }
+    };
+    if (changed && animate && !reduced) {
+      // outgoing view fades first, then the incoming one rises in
+      sections[prev].classList.add('is-leaving');
+      setTimeout(swap, 150);
+    } else swap();
     if (doPush) push();
   }
 
@@ -116,6 +142,7 @@
     sheet.classList.add('is-open');
     wrap.classList.add('is-open');
     btn.setAttribute('aria-expanded', 'true');
+    scrim.classList.remove('is-closing');
     scrim.hidden = false;
     const active = sheet.querySelector('.sheet__row.is-active') || sheet.querySelector('.sheet__row');
     if (active) active.focus({ preventScroll: true });
@@ -126,11 +153,14 @@
     openSheet = null;
     wrap.classList.remove('is-open');
     btn.setAttribute('aria-expanded', 'false');
-    scrim.hidden = true;
     sheet.classList.remove('is-open');
-    if (instant || reduced) { sheet.hidden = true; return; }
+    if (instant || reduced) { sheet.hidden = true; scrim.hidden = true; return; }
     sheet.classList.add('is-closing');
-    setTimeout(() => { if (!sheet.classList.contains('is-open')) { sheet.hidden = true; sheet.classList.remove('is-closing'); } }, 200);
+    scrim.classList.add('is-closing');
+    setTimeout(() => {
+      if (!sheet.classList.contains('is-open')) { sheet.hidden = true; sheet.classList.remove('is-closing'); }
+      if (!openSheet) { scrim.hidden = true; scrim.classList.remove('is-closing'); }
+    }, 220);
   }
   dockBtn.addEventListener('click', () => (openSheet === 'filter' ? closeSheet() : showSheet('filter')));
   viewsBtn.addEventListener('click', () => (openSheet === 'view' ? closeSheet() : showSheet('view')));
@@ -145,9 +175,16 @@
     const changed = state.filter !== f.id;
     state.filter = f.id;
     body.dataset.filter = f.id;
-    $('dock-name').textContent = f.name;
-    $('dock-count').textContent = f.sub;
-    if (f.thumb) $('dock-thumb').src = f.thumb;
+    const swapDock = () => {
+      $('dock-name').textContent = f.name;
+      $('dock-count').textContent = f.sub;
+      if (f.thumb) $('dock-thumb').src = f.thumb;
+    };
+    if (changed && animate && !reduced) {
+      const parts = dockBtn.querySelectorAll('.dock__thumb, .dock__text');
+      parts.forEach((el) => el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' }));
+      setTimeout(() => { swapDock(); parts.forEach((el) => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' })); }, 120);
+    } else swapDock();
     filterSheet.querySelectorAll('.sheet__row').forEach((row) => {
       const on = row.dataset.filter === f.id;
       row.classList.toggle('is-active', on);
@@ -459,11 +496,28 @@
       az: (a, b) => a.dataset.title.localeCompare(b.dataset.title),
       discipline: (a, b) => a.dataset.disc.localeCompare(b.dataset.disc) || b.dataset.year - a.dataset.year,
     };
-    const apply = () => {
+    let applyToken = 0;
+    const apply = (animate = true) => {
       const vis = visible();
       const set = new Set(vis);
-      rows.forEach((r) => r.classList.toggle('is-hidden', !set.has(r)));
-      vis.sort(cmp[sort]).forEach((r) => table.appendChild(r));
+      const reorder = () => {
+        rows.forEach((r) => r.classList.toggle('is-hidden', !set.has(r)));
+        vis.sort(cmp[sort]).forEach((r) => table.appendChild(r));
+      };
+      const token = ++applyToken;
+      if (animate && !reduced && !sections.list.hidden) {
+        // quick fade out, reorder, then the rows that are on screen fade back in top to bottom
+        table.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' }).onfinish = () => {
+          if (token !== applyToken) return;
+          reorder();
+          table.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 1, fill: 'forwards' });
+          const vh = innerHeight;
+          vis.forEach((r, i) => {
+            if (r.getBoundingClientRect().top > vh) return;
+            r.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 280, delay: Math.min(i, 14) * 18, easing: 'ease-out', fill: 'backwards' });
+          });
+        };
+      } else reorder();
       const f = filterById[state.filter];
       const nProjects = vis.filter((r) => r.dataset.kind === 'project').length;
       $('list-sub').textContent = state.filter === 'projects' ? f.sub : `${f.count} ${f.count === 1 ? 'piece' : 'pieces'} · ${nProjects} ${nProjects === 1 ? 'project' : 'projects'}`;
@@ -544,6 +598,8 @@
       const p = cur.project ? projectById[cur.project] : null;
       el.classList.toggle('is-single', !p);
       el.classList.toggle('has-strip', !!p);
+      const newTitle = p ? p.title : a.title;
+      if (titleEl.textContent && titleEl.textContent !== newTitle && !reduced) cardHead.querySelector('.lb__cardtext').animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' });
       // card
       if (p) {
         titleEl.textContent = p.title;
@@ -592,14 +648,21 @@
     }
 
     function setCard(open, animate = true) {
+      const wasOpen = !cardBody.hidden;
       cur.cardOpen = open;
+      const h0 = card.offsetHeight;
       cardBody.hidden = !open;
       card.classList.toggle('is-open', open);
       el.classList.toggle('is-card-open', open);
       cardHead.setAttribute('aria-expanded', String(open));
       toggle.setAttribute('aria-label', open ? 'Hide project info' : 'Show project info');
       if (open) wake();
-      if (animate && !reduced && !isPhone()) card.animate([{ opacity: .9 }, { opacity: 1 }], { duration: 200 });
+      if (animate && !reduced && wasOpen !== open) {
+        // grow or shrink from the anchored edge (top-left on desktop, bottom on phones)
+        const h1 = card.offsetHeight;
+        if (h0 !== h1) card.animate([{ height: `${h0}px` }, { height: `${h1}px` }], { duration: 340, easing: 'cubic-bezier(.22,1,.36,1)' });
+        if (open) cardBody.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, delay: 100, easing: 'ease-out', fill: 'backwards' });
+      }
     }
 
     function open(id, { tile = null, project, push: doPush = true } = {}) {
