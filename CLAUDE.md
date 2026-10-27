@@ -71,6 +71,7 @@ to `main` or touch domain settings without Josh's explicit go-ahead.
 - Radii: sheets 18 (22 phone), docks/buttons 14 to 16, segments/rows 7 to 12, tiles 10
   (8 phone), lightbox asset 14 (12 phone).
 - Masonry: 296px columns, 20px gaps (168px / 12px on phones); every tile keeps its asset's
-  natural aspect ratio (clamped to 0.5 to 1.6 of the column width). No panel backgrounds;
+  natural aspect ratio, never cropped. Video sizes in the manifest are display sizes (sample
+  aspect ratio applied); several files use non-square pixels. No panel backgrounds;
   `bg` only backs PNGs with transparency.
 - Breakpoints: phone < 810, tablet 810 to 1199, desktop 1200+.

@@ -242,7 +242,7 @@
     heightOf(id) {
       const m = assets[id].media;
       const r = m.width && m.height ? m.width / m.height : 4 / 3;
-      return Math.round(clamp(this.w / r, this.w * 0.5, this.w * 1.6));
+      return Math.round(this.w / r); // never cropped: the tile is the asset's exact ratio
     }
     plan() {
       const n = this.ids.length;

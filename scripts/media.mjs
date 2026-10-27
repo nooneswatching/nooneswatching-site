@@ -19,11 +19,17 @@ const bgOf = {};
 for (const p of projects) for (const [m] of p.assets) if (m.bg) bgOf[m.id] = m.bg;
 for (const [m] of singles) if (m.bg) bgOf[m.id] = m.bg;
 
+// Display size. Several videos are stored with non-square pixels (sample aspect ratio),
+// e.g. 1440x1080 at 3:4 displays as a 1080x1080 square; browsers honour that, so must we.
 const probe = (file) => {
-  const out = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', file]).toString().trim();
-  const [w, h] = out.split(',').map(Number);
-  return { width: w, height: h };
+  const out = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height,sample_aspect_ratio', '-of', 'csv=p=0', file]).toString().trim();
+  const [w, h, sar] = out.split(',');
+  const [sn, sd] = (sar && sar !== 'N/A' ? sar : '1:1').split(':').map(Number);
+  const k = sn && sd ? sn / sd : 1;
+  return { width: Math.round(Number(w) * k), height: Number(h) };
 };
+// video frames resampled to square pixels before scaling
+const SQUARE = 'scale=iw*sar:ih,setsar=1';
 const ffmpeg = (args) => execFileSync('ffmpeg', ['-v', 'error', '-y', ...args]);
 
 const manifest = {};
@@ -48,8 +54,8 @@ for (const f of readdirSync(VID)) {
   const src = join(VID, f);
   manifest[id] = probe(src);
   const poster = join(POSTER, `${id}.jpg`), thumb = join(THUMB, `${id}.jpg`);
-  if (!existsSync(poster)) { ffmpeg(['-ss', '0.5', '-i', src, '-frames:v', '1', '-vf', 'scale=1280:-2', '-q:v', '4', poster]); made++; }
-  if (!existsSync(thumb)) { ffmpeg(['-ss', '0.5', '-i', src, '-frames:v', '1', '-vf', 'scale=640:-2', '-q:v', '4', thumb]); made++; }
+  if (!existsSync(poster)) { ffmpeg(['-ss', '0.5', '-i', src, '-frames:v', '1', '-vf', `${SQUARE},scale=1280:-2`, '-q:v', '4', poster]); made++; }
+  if (!existsSync(thumb)) { ffmpeg(['-ss', '0.5', '-i', src, '-frames:v', '1', '-vf', `${SQUARE},scale=640:-2`, '-q:v', '4', thumb]); made++; }
 }
 
 const sorted = Object.fromEntries(Object.keys(manifest).sort().map((k) => [k, manifest[k]]));
