@@ -696,10 +696,10 @@
       clearTimeout(idleTimer);
       el.classList.remove('is-idle', 'is-card-open', 'is-hidden');
       state.open = null;
+      body.classList.remove('lb-open');
       const finish = () => {
         el.hidden = true;
         if (media) { media.remove(); media = null; }
-        body.classList.remove('lb-open');
         if (state.view === 'grid') canvas.resume(); else if (lenis) lenis.start();
         if (lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true }); else $('canvas').focus({ preventScroll: true });
       };

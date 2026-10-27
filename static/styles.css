@@ -312,7 +312,12 @@ body[data-view="grid"] .views__icon[data-view-icon="grid"], body[data-view="list
 
 /* ---- lightbox ------------------------------------------------------------------- */
 .lb { position: fixed; inset: 0; z-index: 50; }
-.lb__bg { position: absolute; inset: 0; background: var(--lb-dim); -webkit-backdrop-filter: blur(80px); backdrop-filter: blur(80px); }
+.lb__bg { position: absolute; inset: 0; background: var(--lb-dim); }
+/* The view behind blurs itself instead of the overlay using backdrop-filter, which
+   iOS Safari drops over the transformed canvas layer. The dock and view switch hide. */
+body.lb-open .grid, body.lb-open .list, body.lb-open .info { filter: blur(var(--lb-blur, 60px)); }
+body.lb-open .dock, body.lb-open .views { opacity: 0; pointer-events: none; }
+.dock, .views { transition: opacity .25s ease; }
 .lb__stage { position: absolute; inset: 24px; touch-action: pan-y; }
 .lb__asset { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 .lb__media { position: relative; border-radius: var(--r-lb); overflow: hidden; background: var(--tile-bg); transform-origin: top left; }
@@ -326,6 +331,7 @@ body[data-view="grid"] .views__icon[data-view-icon="grid"], body[data-view="list
 .lb.is-idle .lb__ui { opacity: 0; }
 .lb.is-idle { cursor: none; }
 .lb__dim { position: absolute; inset: 0; display: none; }
+.lb__stage, .lb__close, .lb__bottom { transition: filter .3s ease; }
 
 .lb__card { position: absolute; top: 40px; left: 40px; width: 340px; border-radius: var(--r-lb); background: var(--card-bg); color: var(--card-ink); box-shadow: var(--card-shadow); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); overflow: hidden; }
 .lb__cardhead { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 12px 12px 16px; text-align: left; color: inherit; }
@@ -385,7 +391,7 @@ body[data-view="grid"].lenis-stopped, html.lenis body[data-view="grid"] { height
 
 /* ---- phone (< 810) ------------------------------------------------------------- */
 @media (max-width: 809px) {
-  :root { --tw: 168px; --th: 118px; --tg: 12px; --r-tile: 8px; --r-sheet: 22px; --edge: 16px; --r-lb: 12px; }
+  :root { --tw: 168px; --th: 118px; --tg: 12px; --r-tile: 8px; --r-sheet: 22px; --edge: 16px; --r-lb: 12px; --lb-blur: 36px; }
   .logo { top: max(var(--edge), calc(env(safe-area-inset-top) + 12px)); }
   .logo__word { font-size: 15px; }
   .grid__fade--t { height: 130px; } .grid__fade--b { height: 150px; } .grid__fade--l, .grid__fade--r { width: 32px; }
@@ -466,7 +472,8 @@ body[data-view="grid"].lenis-stopped, html.lenis body[data-view="grid"] { height
   .lb__meta { gap: 8px; margin-top: 16px; }
   .lb__bottom { bottom: calc(max(8px, env(safe-area-inset-bottom) + 4px) + 70px); }
   .lb.is-single .lb__bottom { bottom: calc(max(8px, env(safe-area-inset-bottom) + 4px) + 70px); }
-  .lb__dim { display: block; background: rgba(0, 0, 0, .4); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+  .lb__dim { display: block; background: rgba(0, 0, 0, .4); opacity: 0; pointer-events: none; transition: opacity .3s ease; }
+  .lb.is-card-open .lb__stage, .lb.is-card-open .lb__close, .lb.is-card-open .lb__bottom { filter: blur(24px); }
   .lb.is-card-open .lb__dim { opacity: 1; pointer-events: auto; }
   .lb.is-card-open .lb__card { z-index: 2; }
   .lb.is-idle .lb__ui { opacity: 1; }
