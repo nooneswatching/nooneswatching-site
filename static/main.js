@@ -608,15 +608,30 @@
     const isOpen = () => !el.hidden;
     const navList = () => filterById[state.filter].ids;
 
+    // On phones the stage is sized from the real chrome rather than fixed bands: the
+    // bottom edge sits just above the count/nav stack, and a picture narrow enough to
+    // clear the close button may rise to the button's top edge, not only its bottom.
+    const fit = (r, aw, ah) => { let w = aw, h = w / r; if (h > ah) { h = ah; w = h * r; } return { w, h }; };
     function sizeMedia(settle = true) {
       if (!media || !cur) return;
       const a = assets[cur.id], m = a.media;
       const r = m.width / m.height;
       const sw = stage.clientWidth, sh = stage.clientHeight;
-      let w = sw, h = w / r;
-      if (h > sh) { h = sh; w = h * r; }
+      let top = 0, avail = sh, { w, h } = fit(r, sw, sh);
+      if (isPhone()) {
+        const gap = 12;
+        const sr = stage.getBoundingClientRect(), cr = $('lb-close').getBoundingClientRect(), br = $('lb-bottom').getBoundingClientRect();
+        const floor = (br.height ? br.top : sr.bottom) - gap;
+        const lo = Math.max(sr.top, cr.bottom), hi = cr.top;
+        top = lo - sr.top; avail = floor - lo; ({ w, h } = fit(r, sw, avail));
+        const clear = (width) => sr.left + (sw + width) / 2 <= cr.left - gap;
+        if (clear(w)) {
+          const alt = fit(r, sw, floor - hi);
+          if (clear(alt.w)) { top = hi - sr.top; avail = floor - hi; ({ w, h } = alt); }
+        }
+      }
       w = Math.round(w); h = Math.round(h);
-      media._rest = { left: Math.round((sw - w) / 2), top: Math.round((sh - h) / 2), width: w, height: h };
+      media._rest = { left: Math.round((sw - w) / 2), top: Math.round(top + (avail - h) / 2), width: w, height: h };
       if (settle && !media._flipping) place(media, media._rest);
     }
     const place = (box, r) => { box.style.left = `${r.left}px`; box.style.top = `${r.top}px`; box.style.width = `${r.width}px`; box.style.height = `${r.height}px`; };
@@ -737,7 +752,10 @@
     // One rAF loop moves the canvas zoom and the asset together: each frame the asset is
     // placed exactly where the tile is at that moment, so there is never a handoff jump.
     // phones: keep the nav row clear of the tray whatever its (closed) height
-    if (window.ResizeObserver) new ResizeObserver(() => { if (!card.classList.contains('is-open')) el.style.setProperty('--tray-h', `${card.offsetHeight}px`); }).observe(card);
+    if (window.ResizeObserver) {
+      new ResizeObserver(() => { if (!card.classList.contains('is-open')) { el.style.setProperty('--tray-h', `${card.offsetHeight}px`); sizeMedia(); } }).observe(card);
+      new ResizeObserver(() => sizeMedia()).observe($('lb-bottom'));
+    }
     let flipRaf = 0;
     const easeOut = (p) => 1 - Math.pow(1 - p, 4);
     function zoomFlip(tile, opening, done) {
