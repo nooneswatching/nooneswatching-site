@@ -608,7 +608,7 @@
     const isOpen = () => !el.hidden;
     const navList = () => filterById[state.filter].ids;
 
-    function sizeMedia() {
+    function sizeMedia(settle = true) {
       if (!media || !cur) return;
       const a = assets[cur.id], m = a.media;
       const r = m.width / m.height;
@@ -617,7 +617,7 @@
       if (h > sh) { h = sh; w = h * r; }
       w = Math.round(w); h = Math.round(h);
       media._rest = { left: Math.round((sw - w) / 2), top: Math.round((sh - h) / 2), width: w, height: h };
-      if (!media._flipping) place(media, media._rest);
+      if (settle && !media._flipping) place(media, media._rest);
     }
     const place = (box, r) => { box.style.left = `${r.left}px`; box.style.top = `${r.top}px`; box.style.width = `${r.width}px`; box.style.height = `${r.height}px`; };
 
@@ -625,36 +625,44 @@
     // one continuous object: images start from the tile's thumbnail and upgrade to the full
     // file once it has decoded; a playing tile video is adopted mid-play and handed back.
     function buildMedia(a, tile = null) {
-      const m = a.media;
       const box = document.createElement('div');
       box.className = 'lb__media';
-      if (m.bg) box.style.background = m.bg;
-      if (m.type === 'placeholder') box.innerHTML = `<span class="tile__ph">${esc(m.label || a.title)}</span>`;
-      else if (m.type === 'video') {
-        const tv = tile && tile.querySelector('video');
-        if (tv) { box.appendChild(tv); box._adopted = { video: tv, id: a.id }; const pl = tv.play(); if (pl && pl.catch) pl.catch(() => {}); } // reparenting pauses it
-        else box.innerHTML = `<video src="${m.src}" poster="${m.thumb || m.poster}" muted loop playsinline autoplay preload="auto"></video>`;
-      } else {
-        const img = document.createElement('img');
-        img.alt = a.title; img.decoding = 'async';
-        img.src = m.thumb || m.src;
-        box.appendChild(img);
-        if (m.thumb && m.src !== m.thumb) {
-          const hi = new Image();
-          hi.src = m.src;
-          (hi.decode ? hi.decode() : Promise.resolve()).then(() => { if (img.isConnected) img.src = m.src; }).catch(() => {});
-        }
-      }
+      if (a.media.bg) box.style.background = a.media.bg;
+      box.appendChild(buildLayer(a, tile));
       return box;
     }
-    // give an adopted video back to a tile showing the same piece, so the grid keeps playing
-    function returnVideo(box) {
-      const ad = box && box._adopted;
-      if (!ad) return;
-      box._adopted = null;
-      const tile = state.view === 'grid' ? canvas.tileFor(ad.id) : null;
-      if (tile && !tile.querySelector('video')) { tile.appendChild(ad.video); const pl = ad.video.play(); if (pl && pl.catch) pl.catch(() => {}); }
-      else { ad.video.pause(); ad.video.removeAttribute('src'); ad.video.load(); ad.video.remove(); }
+    // one picture inside the box: img, video (the tile's own, adopted) or placeholder
+    function buildLayer(a, tile = null) {
+      const m = a.media;
+      if (m.type === 'placeholder') { const ph = document.createElement('span'); ph.className = 'tile__ph'; ph.textContent = m.label || a.title; return ph; }
+      if (m.type === 'video') {
+        const tv = tile && tile.querySelector('video');
+        if (tv) { tv._adoptedId = a.id; const pl = tv.play(); if (pl && pl.catch) pl.catch(() => {}); return tv; } // reparenting pauses it
+        const v = document.createElement('video');
+        v.src = m.src; v.poster = m.thumb || m.poster; v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true; v.preload = 'auto'; v.setAttribute('muted', '');
+        return v;
+      }
+      const img = document.createElement('img');
+      img.alt = a.title; img.decoding = 'async';
+      img.src = m.thumb || m.src;
+      if (m.thumb && m.src !== m.thumb) {
+        const hi = new Image();
+        hi.src = m.src;
+        (hi.decode ? hi.decode() : Promise.resolve()).then(() => { if (img.isConnected) img.src = m.src; }).catch(() => {});
+      }
+      return img;
+    }
+    // give adopted videos back to a tile showing the same piece, so the grid keeps playing
+    function returnVideo(node) {
+      if (!node) return;
+      const vids = node.tagName === 'VIDEO' ? [node] : [...node.querySelectorAll('video')];
+      for (const v of vids) {
+        if (!v._adoptedId) continue;
+        const id = v._adoptedId; v._adoptedId = null;
+        const tile = state.view === 'grid' ? canvas.tileFor(id) : null;
+        if (tile && !tile.querySelector('video')) { tile.appendChild(v); const pl = v.play(); if (pl && pl.catch) pl.catch(() => {}); }
+        else { v.pause(); v.removeAttribute('src'); v.load(); v.remove(); }
+      }
     }
 
     function render({ fromTile = null } = {}) {
@@ -688,17 +696,33 @@
         const active = thumbs.querySelector('.is-active');
         if (active) requestAnimationFrame(() => active.scrollIntoView({ block: 'nearest', inline: 'center', behavior: reduced ? 'auto' : 'smooth' }));
       } else { strip.hidden = true; thumbs.innerHTML = ''; countEl.textContent = ''; }
-      // media
-      const old = media;
-      media = buildMedia(a, fromTile);
-      assetEl.appendChild(media);
-      sizeMedia();
-      if (old) {
-        returnVideo(old);
-        if (!reduced) { old.style.transition = 'opacity .2s ease'; old.style.opacity = '0'; setTimeout(() => old.remove(), 200); } else old.remove();
+      // media: the same box stays and morphs to the next piece's shape while the picture
+      // crossfades inside it, so moving between pieces reads as one object changing
+      if (media && !fromTile) {
+        const box = media;
+        const prev = [...box.children];
+        const layer = buildLayer(a);
+        box.appendChild(layer);
+        box.style.background = a.media.bg || '';
+        const from = { left: parseFloat(box.style.left) || 0, top: parseFloat(box.style.top) || 0, width: parseFloat(box.style.width) || 0, height: parseFloat(box.style.height) || 0 };
+        sizeMedia(false);
+        const to = box._rest;
+        const done = () => { box._flipping = false; place(box, box._rest); };
+        if (!reduced) {
+          box.getAnimations().forEach((x) => x.cancel());
+          box._flipping = true;
+          const px = (r) => ({ left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+          box.animate([px(from), px(to)], { duration: 380, easing: 'cubic-bezier(.22,1,.36,1)' }).onfinish = done;
+          layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, easing: 'ease' }).onfinish = () => prev.forEach((l) => { returnVideo(l); l.remove(); });
+        } else { done(); prev.forEach((l) => { returnVideo(l); l.remove(); }); }
+      } else {
+        const old = media;
+        media = buildMedia(a, fromTile);
+        assetEl.appendChild(media);
+        sizeMedia();
+        if (old) { returnVideo(old); old.remove(); }
+        if (fromTile && !reduced) flipIn(fromTile);
       }
-      if (fromTile && !reduced) flipIn(fromTile);
-      else if (!reduced && old) { media.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease' }); }
       document.title = `${p ? p.title : a.title} · NO/ONES/WATCHING`;
     }
 
