@@ -285,7 +285,11 @@ export const singles = [
 // ---- normalise --------------------------------------------------------------------
 const slugify = (s) => s.toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-export function buildCatalogue(manifest = {}) {
+// Placeholder tiles (todo) are hidden until Josh supplies the media: the entries stay in
+// the data so they come back by flipping this. A project with nothing else left is skipped.
+export const SHOW_PLACEHOLDERS = false;
+
+export function buildCatalogue(manifest = {}, { placeholders = SHOW_PLACEHOLDERS } = {}) {
   const assets = [];
   const used = new Set();
   const uniq = (slug) => { let s = slug, n = 2; while (used.has(s)) s = `${slug}-${n++}`; used.add(s); return s; };
@@ -297,8 +301,9 @@ export function buildCatalogue(manifest = {}) {
     return out;
   };
 
-  const projectsOut = projects.map((p) => {
-    const ids = p.assets.map(([m, title, caption, o = {}]) => {
+  const keep = (m) => placeholders || m.type !== 'placeholder';
+  const projectsOut = projects.filter((p) => p.assets.some(([m]) => keep(m))).map((p) => {
+    const ids = p.assets.filter(([m]) => keep(m)).map(([m, title, caption, o = {}]) => {
       assets.push({
         id: m.id, slug: uniq(`${p.slug}-${slugify(title)}`), title, caption: caption || '',
         client: o.client || p.client, year: o.year || p.year, disciplines: o.disciplines || p.disciplines,
@@ -310,12 +315,15 @@ export function buildCatalogue(manifest = {}) {
     return { ...rest, assets: ids };
   });
 
-  singles.forEach(([m, title, caption, o]) => {
+  singles.filter(([m]) => keep(m)).forEach(([m, title, caption, o]) => {
     assets.push({ id: m.id, slug: uniq(slugify(title)), title, caption, client: o.client, year: o.year, disciplines: o.disciplines, media: mediaOf(m), projectId: o.projectId || null, inProject: false });
   });
 
   projectsOut.forEach((p) => {
-    if (!assets.find((a) => a.id === p.cover)) throw new Error(`Project ${p.id}: cover ${p.cover} is not an asset`);
+    if (!assets.find((a) => a.id === p.cover)) {
+      if (placeholders) throw new Error(`Project ${p.id}: cover ${p.cover} is not an asset`);
+      p.cover = p.assets[0];                                   // the cover was a hidden placeholder
+    }
   });
   const ids = assets.map((a) => a.id);
   const dup = ids.find((id, i) => ids.indexOf(id) !== i);

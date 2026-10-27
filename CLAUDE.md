@@ -23,7 +23,8 @@ Node 18+. `scripts/media.mjs` needs ffmpeg/ffprobe (local only; outputs are comm
 ## Layout
 - `src/work.mjs`: ALL work. `projects[]` (ordered; each with `assets` as
   `[media, title, caption]` and a `cover` id) and `singles[]`. `buildCatalogue()`
-  normalises it. `todo(id, label)` is a placeholder for media Josh still has to supply.
+  normalises it. `todo(id, label)` is a placeholder for media Josh still has to supply;
+  `SHOW_PLACEHOLDERS` (false for now) hides them and any project left with nothing else.
 - `src/content.mjs`: site meta, socials, Info copy (statement, about, experience,
   recognition, clients). TODO(Josh) comments mark copy still to approve.
 - `build.mjs`: catalogue derivation (canvas order is a round-robin across projects and
