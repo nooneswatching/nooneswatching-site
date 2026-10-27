@@ -699,35 +699,22 @@
       // media: the same box stays and morphs to the next piece's shape while the picture
       // crossfades inside it, so moving between pieces reads as one object changing
       if (media && !fromTile) {
-        // Neither picture scales: the old one stays at its size, the new one sits at its
-        // final size, both centred, and only the box edges move while they crossfade.
+        // Switching pieces: the box takes the new size at once, no resize animation; the
+        // next picture fades in over the previous one, each at its own size.
         const box = media;
         const prev = [...box.children];
         const layer = buildLayer(a);
         box.appendChild(layer);
         box.style.background = a.media.bg || '';
         const br = box.getBoundingClientRect(), sr = stage.getBoundingClientRect();
-        const from = { left: br.left - sr.left, top: br.top - sr.top, width: br.width, height: br.height };
+        const was = { width: br.width, height: br.height };
         box.getAnimations().forEach((x) => x.cancel());
-        place(box, from);
-        sizeMedia(false);
-        const to = box._rest;
-        const fix = (l, r) => { l.classList.add('is-fixed'); l.style.width = `${r.width}px`; l.style.height = `${r.height}px`; };
-        const token = ++morphToken;
-        const done = () => {
-          if (token !== morphToken) return;
-          box._flipping = false; place(box, box._rest);
-          layer.classList.remove('is-fixed'); layer.style.width = ''; layer.style.height = '';
-        };
+        box._flipping = false;
+        sizeMedia();
         if (!reduced) {
-          prev.forEach((l) => { if (!l.classList.contains('is-fixed')) fix(l, from); });
-          fix(layer, to);
-          box._flipping = true;
-          const px = (r) => ({ left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
-          box.animate([px(from), px(to)], { duration: 420, easing: 'cubic-bezier(.22,1,.36,1)' }).onfinish = done;
-          setTimeout(done, 520); // belt and braces: a dropped finish event must not leave the layer fixed
-          layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: 'ease' }).onfinish = () => prev.forEach((l) => { returnVideo(l); l.remove(); });
-        } else { done(); prev.forEach((l) => { returnVideo(l); l.remove(); }); }
+          prev.forEach((l) => { if (!l.classList.contains('is-fixed')) { l.classList.add('is-fixed'); l.style.width = `${was.width}px`; l.style.height = `${was.height}px`; } });
+          layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: 'ease' }).onfinish = () => prev.forEach((l) => { returnVideo(l); l.remove(); });
+        } else prev.forEach((l) => { returnVideo(l); l.remove(); });
       } else {
         const old = media;
         media = buildMedia(a, fromTile);
@@ -743,7 +730,7 @@
     // placed exactly where the tile is at that moment, so there is never a handoff jump.
     // phones: keep the nav row clear of the tray whatever its (closed) height
     if (window.ResizeObserver) new ResizeObserver(() => { if (!card.classList.contains('is-open')) el.style.setProperty('--tray-h', `${card.offsetHeight}px`); }).observe(card);
-    let flipRaf = 0, morphToken = 0;
+    let flipRaf = 0;
     const easeOut = (p) => 1 - Math.pow(1 - p, 4);
     function zoomFlip(tile, opening, done) {
       cancelAnimationFrame(flipRaf);
