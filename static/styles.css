@@ -469,15 +469,15 @@ body[data-view="grid"].lenis-stopped, html.lenis body[data-view="grid"] { height
   /* the project card becomes the info tray */
   .lb__card { top: auto; left: 8px; right: 8px; bottom: max(8px, calc(env(safe-area-inset-bottom) + 4px)); width: auto; border-radius: 20px; background: var(--glass-sheet-m); border: 1px solid var(--glass-border); box-shadow: none; transition: transform .35s var(--ease-out); }
   .lb__cardhead { padding: 12px 10px 12px 16px; }
-  .lb__handle { display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--ink-40); margin: 8px auto 0; opacity: 0; transition: opacity .25s ease; }
-  .lb__card.is-open .lb__handle { opacity: 1; }
+  .lb__handle { display: none; width: 36px; height: 4px; border-radius: 2px; background: var(--ink-40); margin: 8px auto 0; }
+  .lb__card.is-open .lb__handle { display: block; animation: fade-in .25s ease both; }
   .lb__card.is-open { padding-bottom: 8px; }
   .lb__cardbody { padding: 0 16px 16px; }
   .lb__cardbody::before { margin: 4px 0 16px; }
   .lb__desc { line-height: 21px; }
   .lb__meta { gap: 8px; margin-top: 16px; }
-  .lb__bottom { bottom: calc(max(8px, env(safe-area-inset-bottom) + 4px) + 70px); }
-  .lb.is-single .lb__bottom { bottom: calc(max(8px, env(safe-area-inset-bottom) + 4px) + 70px); }
+  /* the nav row sits 10px above the tray; --tray-h is measured by main.js */
+  .lb__bottom, .lb.is-single .lb__bottom { bottom: calc(max(8px, env(safe-area-inset-bottom) + 4px) + var(--tray-h, 60px) + 10px); }
   .lb__dim { display: block; background: rgba(0, 0, 0, .4); opacity: 0; pointer-events: none; transition: opacity .3s ease; }
   .lb.is-card-open .lb__stage, .lb.is-card-open .lb__close, .lb.is-card-open .lb__bottom { filter: blur(24px); }
   .lb.is-card-open .lb__dim { opacity: 1; pointer-events: auto; }

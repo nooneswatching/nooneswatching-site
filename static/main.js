@@ -703,6 +703,8 @@
 
     // One rAF loop moves the canvas zoom and the asset together: each frame the asset is
     // placed exactly where the tile is at that moment, so there is never a handoff jump.
+    // phones: keep the nav row clear of the tray whatever its (closed) height
+    if (window.ResizeObserver) new ResizeObserver(() => { if (!card.classList.contains('is-open')) el.style.setProperty('--tray-h', `${card.offsetHeight}px`); }).observe(card);
     let flipRaf = 0;
     const easeOut = (p) => 1 - Math.pow(1 - p, 4);
     function zoomFlip(tile, opening, done) {
