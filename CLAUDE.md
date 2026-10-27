@@ -108,9 +108,9 @@ to `main` or touch domain settings without Josh's explicit go-ahead.
   imagery in light mode are clear glass (white .04) with white icons.
 - Radii: sheets 18 (22 phone), docks/buttons 14 to 16, segments/rows 7 to 12, tiles 10
   (8 phone), lightbox asset 14 (12 phone).
-- Masonry: 362px columns, 40px gaps (168px / 12px on phones; desktop values picked by Josh,
-  Oct 2026); every tile keeps its asset's
-  natural aspect ratio, never cropped. Videos must use square pixels (Safari paints a
+- Masonry: 296px columns, 20px gaps (168px / 12px on phones; 362/40 was tried and dropped
+  for smaller screens, Oct 2026); every tile keeps its asset's natural aspect ratio, never
+  cropped. Videos must use square pixels (Safari paints a
   clip's first frames at its stored size, a squashed flash); `npm run media` re-encodes any
   that don't. No panel backgrounds;
   `bg` only backs PNGs with transparency.
