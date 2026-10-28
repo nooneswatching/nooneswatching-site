@@ -119,7 +119,7 @@
       sections.info.hidden = view !== 'info';
       if (view === 'grid') { if (lenis) lenis.stop(); canvas.resume(); }
       else { if (lenis) lenis.start(); canvas.pause(); if (scroll && changed) scrollTop(); }
-      if (view === 'list') listView.refresh();
+      if (view === 'list') listView.refresh(changed && animate && !reduced);
       if (changed && animate && !reduced) {
         const inc = sections[view];
         inc.classList.add('is-entering');
@@ -553,7 +553,9 @@
       discipline: (a, b) => a.dataset.disc.localeCompare(b.dataset.disc) || b.dataset.year - a.dataset.year,
     };
     let applyToken = 0;
-    const apply = (animate = true) => {
+    // enter: the view is just appearing, so the rows rise in straight away (no fade-out first,
+    // which would show the full table for a few frames before the entrance)
+    const apply = (animate = true, enter = false) => {
       const vis = visible();
       const set = new Set(vis);
       const reorder = () => {
@@ -561,18 +563,21 @@
         vis.sort(cmp[sort]).forEach((r) => table.appendChild(r));
       };
       const token = ++applyToken;
-      if (animate && !reduced && !sections.list.hidden) {
+      const riseIn = () => {
+        const vh = innerHeight;
+        vis.forEach((r, i) => {
+          if (r.getBoundingClientRect().top > vh) return;
+          r.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 280, delay: Math.min(i, 14) * 18, easing: 'ease-out', fill: 'backwards' });
+        });
+      };
+      if (enter && !reduced) { table.getAnimations().forEach((x) => x.cancel()); reorder(); riseIn(); }
+      else if (animate && !reduced && !sections.list.hidden) {
         // quick fade out, reorder, then the rows that are on screen fade back in top to bottom
         const out = table.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' });
         out.onfinish = () => {
           out.cancel();
           if (token !== applyToken) return;
-          reorder();
-          const vh = innerHeight;
-          vis.forEach((r, i) => {
-            if (r.getBoundingClientRect().top > vh) return;
-            r.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 280, delay: Math.min(i, 14) * 18, easing: 'ease-out', fill: 'backwards' });
-          });
+          reorder(); riseIn();
         };
       } else reorder();
       const f = filterById.all;
@@ -626,7 +631,7 @@
       table.addEventListener('pointerleave', () => preview.classList.remove('is-on'));
     }
     let ready = false;
-    return { apply, refresh() { apply(); if (!ready) { ready = true; readySeg(sortSeg); } else placePill(sortSeg, false); } };
+    return { apply, refresh(enter = false) { apply(!enter, enter); if (!ready) { ready = true; readySeg(sortSeg); } else placePill(sortSeg, false); } };
   })();
 
   $('back-to-top').addEventListener('click', (e) => { e.preventDefault(); scrollTop(false); });

@@ -182,8 +182,8 @@ body.lb-open .logo { opacity: 0; pointer-events: none; }
 /* The Index section itself never transforms: a transform would make it the containing block
    for its fixed children (the hover preview card and bottom fade), and the card, still holding
    the translate from the last row hover, would widen the document and flash a horizontal
-   scrollbar that lifts the fixed bottom nav. Its head and table rise instead. */
-.list.is-entering > .list__head, .list.is-entering > .table { animation: view-in .4s var(--ease-out) both; }
+   scrollbar that lifts the fixed bottom nav. Its head rises instead, and its rows (main.js). */
+.list.is-entering > .list__head { animation: view-in .4s var(--ease-out) both; }   /* the rows rise in from main.js */
 @keyframes view-in { from { opacity: 0; transform: translateY(10px); } }
 .grid.is-entering { animation-name: view-fade; }
 @keyframes view-fade { from { opacity: 0; } }
