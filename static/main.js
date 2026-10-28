@@ -668,7 +668,10 @@
         }
       }
       w = Math.round(w); h = Math.round(h);
-      media._rest = { left: Math.round((sw - w) / 2), top: Math.round(top + (avail - h) / 2), width: w, height: h };
+      const next = { left: Math.round((sw - w) / 2), top: Math.round(top + (avail - h) / 2), width: w, height: h };
+      const was = media._rest;
+      if (was && media._flipping && (was.top !== next.top || was.left !== next.left || was.height !== next.height)) diag(`rest moved mid-flight: top ${was.top}->${next.top} h ${was.height}->${next.height} (vh ${innerHeight}, stage ${sh})`);
+      media._rest = next;
       if (settle && !media._flipping) place(media, media._rest);
     }
     const place = (box, r) => { box.style.left = `${r.left}px`; box.style.top = `${r.top}px`; box.style.width = `${r.width}px`; box.style.height = `${r.height}px`; };
@@ -776,6 +779,7 @@
         if (hadThumbFocus && active) active.focus({ preventScroll: true });
       } else { strip.hidden = true; thumbs.innerHTML = ''; countEl.textContent = ''; }
       if (isOpen() && !el.contains(document.activeElement)) el.focus({ preventScroll: true });
+      syncTray();                                               // the bottom row sits on the tray: measure it now, not a frame later
       // media: the same box stays and morphs to the next piece's shape while the picture
       // crossfades inside it, so moving between pieces reads as one object changing
       if (media && !fromTile) {
@@ -812,8 +816,9 @@
     // One rAF loop moves the canvas zoom and the asset together: each frame the asset is
     // placed exactly where the tile is at that moment, so there is never a handoff jump.
     // phones: keep the nav row clear of the tray whatever its (closed) height
+    const syncTray = () => { if (!card.classList.contains('is-open')) el.style.setProperty('--tray-h', `${card.offsetHeight}px`); };
     if (window.ResizeObserver) {
-      new ResizeObserver(() => { if (!card.classList.contains('is-open')) { el.style.setProperty('--tray-h', `${card.offsetHeight}px`); sizeMedia(); } }).observe(card);
+      new ResizeObserver(() => { syncTray(); sizeMedia(); }).observe(card);
       new ResizeObserver(() => sizeMedia()).observe($('lb-bottom'));
     }
     let flipRaf = 0;
@@ -823,7 +828,10 @@
       const Z = isPhone() ? ZOOM_PHONE : ZOOM;
       const rest = canvas.restRect(tile);                       // tile at zoom 1 (viewport)
       const sr = stage.getBoundingClientRect();
-      const full = media._rest;                                  // open rect (stage coords)
+      // open rect (stage coords). It can move mid-flight (Safari's viewport, the tray), so the
+      // flight follows it through a short lag rather than snapping to it at the end.
+      let full = { ...media._rest };
+      const chase = () => { const r = media._rest; let d = 0; for (const k of ['left', 'top', 'width', 'height']) { const n = full[k] + (r[k] - full[k]) * .3; d = Math.max(d, Math.abs(r[k] - n)); full[k] = n; } return d; };
       const ox = rest.left + rest.width / 2, oy = rest.top + rest.height / 2;
       const r0 = parseFloat(getComputedStyle(tile).borderRadius) || 8;
       const r1 = parseFloat(getComputedStyle(media).borderRadius) || 14;
@@ -843,9 +851,10 @@
         canvas.setZoom(ox, oy, z);
         // where the tile is right now, zoom included (stage coords)
         const tl = ox + (rest.left - ox) * z - sr.left, tt = oy + (rest.top - oy) * z - sr.top, tw = rest.width * z, th = rest.height * z;
-        place(box, { left: tl + (full.left - tl) * k, top: tt + (full.top - tt) * k, width: tw + (full.width - tw) * k, height: th + (full.height - th) * k });
+        const lag = chase(); const f = full;
+        place(box, { left: tl + (f.left - tl) * k, top: tt + (f.top - tt) * k, width: tw + (f.width - tw) * k, height: th + (f.height - th) * k });
         box.style.borderRadius = `${(r0 + (r1 - r0) * k).toFixed(2)}px`;
-        if (p < 1) flipRaf = requestAnimationFrame(frame);
+        if (p < 1 || (opening && lag > .5)) flipRaf = requestAnimationFrame(frame);   // opening: run on until the target is reached
         else {
           box._flipping = false; box.classList.remove('is-flipping');
           diag(`${opening ? 'open' : 'close'}: ${frames} frames, longest ${Math.round(worst)}ms`);
