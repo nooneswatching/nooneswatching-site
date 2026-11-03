@@ -347,7 +347,7 @@ body.lb-open .canvas, body.lb-open .list, body.lb-open .info { transition: filte
 body.lb-open .dock, body.lb-open .views { opacity: 0; pointer-events: none; }
 body[data-noblur] .canvas, body[data-noblur] .list, body[data-noblur] .info { filter: none !important; }
 /* Safari A/B flags (see main.js): what the page costs without its glass and hover effects */
-body[data-noglass] .glass, body[data-noglass] .dock__btn::before, body[data-noglass] .tile__label, body[data-noglass] .lb__card, body[data-noglass] .lb__close, body[data-noglass] .lb__arrow, body[data-noglass] .lb__strip { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+body[data-noglass] .glass, body[data-noglass] .dock__btn::before, body[data-noglass] .tile__label, body[data-noglass] .lb__card, body[data-noglass] .lb__close, body[data-noglass] .lb__arrow, body[data-noglass] .lb__strip-bg { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 body[data-noglass] .logo { mix-blend-mode: normal !important; }
 body[data-nohover] .tile.is-hover { transform: none !important; box-shadow: none !important; }
 body[data-squarevideo] .tile:has(video) { border-radius: 0 !important; }
@@ -406,7 +406,7 @@ body:not([data-view="grid"]) .dock { opacity: 0; pointer-events: none; }
 .lb__marrow { display: none; }
 /* The strip shows at most 8 thumbs (8 x 44 + 7 x 6 + padding) and scrolls like the phone
    one: the active thumb is scrolled to the centre, edges fade when there is more. */
-.lb__strip { position: relative; max-width: 406px; padding: 6px; border-radius: 12px; background: var(--strip); border-color: var(--glass-border); overflow: hidden; -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px); }
+.lb__strip { position: relative; max-width: 406px; padding: 6px; border-radius: 12px; overflow: hidden; }
 .lb__thumbs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
 .lb__thumbs::-webkit-scrollbar { display: none; }
 .lb__strip::before, .lb__strip::after { content: ""; position: absolute; top: 0; bottom: 0; width: 28px; z-index: 1; pointer-events: none; opacity: 0; transition: opacity .2s ease; }
@@ -418,6 +418,10 @@ body:not([data-view="grid"]) .dock { opacity: 0; pointer-events: none; }
    chrome steps back, and on release the thumbs ease home */
 .lb__thumbs.is-scrubbing, .lb.is-scrubbing .lb__strip { overflow: visible; }
 .lb.is-scrubbing .lb__strip::before, .lb.is-scrubbing .lb__strip::after { opacity: 0; }
+/* the strip's glass is its own layer so it can fade out while thumbs break out of it */
+.lb__strip-bg { position: absolute; inset: 0; border-radius: inherit; background: var(--strip); border: 1px solid var(--glass-border); -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px); transition: opacity .15s ease; pointer-events: none; }
+.lb__thumbs { position: relative; }
+.lb.is-scrubbing .lb__strip-bg { opacity: 0; }
 .lb__thumbs.is-settling .lb__thumb { transition: transform .3s var(--ease-out), opacity .15s ease; }
 .lb.is-scrubbing .lb__close, .lb.is-scrubbing .lb__count, .lb.is-scrubbing .lb__card, .lb.is-scrubbing .lb__marrow { opacity: 0; pointer-events: none; }
 .lb__count, .lb__marrow { transition: opacity .2s ease; }
@@ -509,7 +513,8 @@ body[data-view="grid"].lenis-stopped, html.lenis body[data-view="grid"] { height
   .lb__count { order: 0; align-self: center; font-size: 13px; color: var(--ink-50); background: none; padding: 0; }
   .lb__navrow { gap: 8px; }
   .lb__marrow { display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 16px; background: var(--glass-dock); border-color: var(--glass-border); color: var(--ink); flex: none; }
-  .lb__strip { flex: 1; max-width: none; min-width: 0; height: 56px; padding: 0; border-radius: 16px; background: var(--glass-dock); --strip-fade: var(--glass-sheet-m); }
+  .lb__strip { flex: 1; max-width: none; min-width: 0; height: 56px; padding: 0; border-radius: 16px; --strip-fade: var(--glass-sheet-m); }
+  .lb__strip-bg { background: var(--glass-dock); }
   .lb__thumbs { height: 100%; align-items: center; padding: 0 8px; -webkit-overflow-scrolling: touch; }
   .lb__thumb { width: 54px; height: 36px; border-radius: 6px; }
   .lb.is-single .lb__bottom { display: flex; }

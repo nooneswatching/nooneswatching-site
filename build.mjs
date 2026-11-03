@@ -213,7 +213,7 @@ const lightbox = () => `<div class="lb" id="lb" hidden role="dialog" aria-modal=
       <p class="lb__count" id="lb-count"></p>
       <div class="lb__navrow">
         <button type="button" class="lb__marrow glass" id="lb-mprev" aria-label="Previous">${I.chevL}</button>
-        <div class="lb__strip glass" id="lb-strip" hidden><div class="lb__thumbs" id="lb-thumbs" role="list"></div></div>
+        <div class="lb__strip" id="lb-strip" hidden><div class="lb__strip-bg"></div><div class="lb__thumbs" id="lb-thumbs" role="list"></div></div>
         <button type="button" class="lb__marrow glass" id="lb-mnext" aria-label="Next">${I.chevR}</button>
       </div>
     </div>

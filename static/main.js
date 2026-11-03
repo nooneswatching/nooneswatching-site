@@ -1041,7 +1041,7 @@
         base = thumbs.scrollLeft;                               // carry the scroll into a transform so the row can overflow
         thumbs.classList.add('is-scrubbing'); el.classList.add('is-scrubbing');
         thumbs.scrollLeft = 0; thumbs.style.transform = `translateX(${-base}px)`;
-        try { thumbs.setPointerCapture(start.pid); } catch (_) {}
+        try { strip.setPointerCapture(start.pid); } catch (_) {}
         wake(); tick();
       };
       const end = () => {
@@ -1056,19 +1056,19 @@
         justScrubbed = setTimeout(() => { justScrubbed = 0; }, 400);   // the click that follows the release is not a jump
         if (cur) { jump(cur.id); }                              // the real layer for where we landed, and the URL
       };
-      thumbs.addEventListener('pointerdown', (e) => {
-        if (hoverable || e.pointerType === 'mouse') return;
-        const t = e.target.closest('.lb__thumb'); if (!t) return;
+      // the whole strip is the hit area, not just a thumb
+      strip.addEventListener('pointerdown', (e) => {
+        if (hoverable || e.pointerType === 'mouse' || !thumbs.children.length) return;
         start = { x: e.clientX, y: e.clientY, pid: e.pointerId }; px = e.clientX;
         timer = setTimeout(begin, HOLD);
       });
-      thumbs.addEventListener('pointermove', (e) => {
+      strip.addEventListener('pointermove', (e) => {
         if (!start) return;
         px = e.clientX;
         if (!scrub.on && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 8) { clearTimeout(timer); timer = 0; start = null; }   // a scroll, not a hold
       });
-      thumbs.addEventListener('touchmove', (e) => { if (scrub.on) e.preventDefault(); }, { passive: false });
-      thumbs.addEventListener('pointerup', end); thumbs.addEventListener('pointercancel', end);
+      strip.addEventListener('touchmove', (e) => { if (scrub.on) e.preventDefault(); }, { passive: false });
+      strip.addEventListener('pointerup', end); strip.addEventListener('pointercancel', end);
       thumbs.addEventListener('click', (e) => { if (scrub.on || justScrubbed) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
     }
 
