@@ -662,15 +662,12 @@
       let top = 0, avail = sh, { w, h } = fit(r, sw, sh);
       if (isPhone()) {
         const gap = 12;
-        const sr = stage.getBoundingClientRect(), cr = $('lb-close').getBoundingClientRect(), br = $('lb-bottom').getBoundingClientRect();
+        const sr = stage.getBoundingClientRect(), cr = $('lb-close').getBoundingClientRect(), br = $('lb-bottom').getBoundingClientRect(), kr = card.getBoundingClientRect();
         const floor = (br.height ? br.top : sr.bottom) - gap;
-        const lo = Math.max(sr.top, cr.bottom), hi = cr.top;
+        // the card (closed height, even while open) and the close button cap the top
+        const cardBottom = card.offsetHeight ? kr.top + (parseFloat(el.style.getPropertyValue('--tray-h')) || kr.height) : 0;
+        const lo = Math.max(sr.top, cr.bottom, cardBottom) + gap;
         top = lo - sr.top; avail = floor - lo; ({ w, h } = fit(r, sw, avail));
-        const clear = (width) => sr.left + (sw + width) / 2 <= cr.left - gap;
-        if (clear(w)) {
-          const alt = fit(r, sw, floor - hi);
-          if (clear(alt.w)) { top = hi - sr.top; avail = floor - hi; ({ w, h } = alt); }
-        }
       }
       w = Math.round(w); h = Math.round(h);
       const next = { left: Math.round((sw - w) / 2), top: Math.round(top + (avail - h) / 2), width: w, height: h };
@@ -1125,7 +1122,7 @@
     // swipe the tray down to close it
     let ty = null;
     card.addEventListener('pointerdown', (e) => { if (isPhone() && cur?.cardOpen) ty = { y: e.clientY, id: e.pointerId }; });
-    card.addEventListener('pointerup', (e) => { if (ty && e.pointerId === ty.id && e.clientY - ty.y > 40) setCard(false); ty = null; });
+    card.addEventListener('pointerup', (e) => { if (ty && e.pointerId === ty.id && ty.y - e.clientY > 40) setCard(false); ty = null; });   // swipe up closes the card (it hangs from the top)
 
     el.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { e.preventDefault(); if (cur?.cardOpen) setCard(false); else close(); }

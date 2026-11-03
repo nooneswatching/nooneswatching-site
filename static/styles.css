@@ -501,7 +501,7 @@ body[data-view="grid"].lenis-stopped, html.lenis body[data-view="grid"] { height
   .info__foot { padding: 20px 0 24px; }
 
   .lb__bg { background: var(--lb-dim-m); }
-  .lb__stage { inset: 100px 16px 190px; }
+  .lb__stage { inset: 16px 16px 100px; }   /* top and bottom limits come from the card and the nav row (main.js) */
   .lb__scrim { display: none; }
   .lb__close { top: max(16px, calc(env(safe-area-inset-top) + 16px)); right: 16px; width: 44px; height: 44px; border-radius: 12px; background: var(--glass-dock); border-color: var(--glass-border); color: var(--ink); transition: opacity .2s ease; }
   .lb__arrow { display: none; }
@@ -517,17 +517,16 @@ body[data-view="grid"].lenis-stopped, html.lenis body[data-view="grid"] { height
   .lb.is-single .lb__navrow { justify-content: space-between; }
   .lb.is-single .lb__strip { display: none; }
   /* the project card becomes the info tray */
-  .lb__card { top: auto; left: 8px; right: 8px; bottom: max(8px, calc(env(safe-area-inset-bottom) + 4px)); width: auto; border-radius: 20px; background: var(--glass-sheet-m); border: 1px solid var(--glass-border); box-shadow: none; transition: transform .35s var(--ease-out), opacity .2s ease; }
+  /* the project card sits at the top beside the close button and opens downward over the
+     asset; the count, arrows and filmstrip take the bottom */
+  .lb__card { top: max(16px, calc(env(safe-area-inset-top) + 16px)); left: 16px; right: 68px; bottom: auto; width: auto; border-radius: 14px; background: var(--glass-sheet-m); border: 1px solid var(--glass-border); box-shadow: none; transition: opacity .2s ease; }
   .lb__cardhead { padding: 12px 10px 12px 16px; }
-  .lb__handle { display: none; width: 36px; height: 4px; border-radius: 2px; background: var(--ink-40); margin: 8px auto 0; }
-  .lb__card.is-open .lb__handle { display: block; animation: fade-in .25s ease both; }
+  .lb__handle { display: none; }
   .lb__card.is-open { padding-bottom: 8px; }
   .lb__cardbody { padding: 0 16px 16px; }
   .lb__cardbody::before { margin: 4px 0 16px; }
   .lb__desc { line-height: 21px; }
   .lb__meta { gap: 8px; margin-top: 16px; }
-  /* the nav row sits 10px above the tray; --tray-h is measured by main.js */
-  .lb__bottom, .lb.is-single .lb__bottom { bottom: calc(max(8px, env(safe-area-inset-bottom) + 4px) + var(--tray-h, 60px) + 10px); }
   .lb__dim { display: block; background: rgba(0, 0, 0, .4); opacity: 0; pointer-events: none; transition: opacity .3s ease; }
   .lb.is-card-open .lb__stage, .lb.is-card-open .lb__close, .lb.is-card-open .lb__bottom { filter: blur(24px); }
   .lb.is-card-open .lb__dim { opacity: 1; pointer-events: auto; }

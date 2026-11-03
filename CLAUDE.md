@@ -82,7 +82,9 @@ in `dist/` with its own title/OG tags; main.js reads `location` on boot.
   filmstrip; singles show title + caption + "From <project> ↗". Controls auto-hide after
   2s without pointer movement on desktop only; on phones they never hide.
 - Mobile sheets expand in place from their corner (filter bottom-left, view bottom-right)
-  and blur everything behind them. The project card becomes the bottom info tray.
+  and blur everything behind them. In the phone lightbox the project card sits top-left
+  beside the close button and opens downward over the asset; count, arrows and filmstrip
+  take the bottom. Press and hold the strip to scrub (dock-style magnification).
 - No em dashes in UI copy. Existing project copy from the old site is unchanged.
 - The view switcher (Grid/Index/Info) is icon-only (labels removed Oct 2026); the pill
   slides between fixed 34px items on `--ease-pill`, measured from the seg's padding box.
