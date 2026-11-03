@@ -779,6 +779,7 @@
         strip.hidden = false;
         countEl.textContent = `${p.assets.indexOf(cur.id) + 1} / ${p.assets.length}`;
         const active = thumbs.querySelector('.is-active');
+        strip.classList.toggle('is-scrollable', thumbs.scrollWidth > thumbs.clientWidth + 1);
         if (active) requestAnimationFrame(() => active.scrollIntoView({ block: 'nearest', inline: 'center', behavior: reduced ? 'auto' : 'smooth' }));
         // rebuilding the strip drops a focused thumb; keep the keys working
         if (hadThumbFocus && active) active.focus({ preventScroll: true });
@@ -1010,6 +1011,9 @@
     $('lb-mprev').addEventListener('click', () => step(-1));
     $('lb-mnext').addEventListener('click', () => step(1));
     thumbs.addEventListener('click', (e) => { const t = e.target.closest('[data-id]'); if (t) jump(t.dataset.id); });
+    // a mouse wheel scrolls the strip sideways (trackpads already do)
+    thumbs.addEventListener('wheel', (e) => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && thumbs.scrollWidth > thumbs.clientWidth) { thumbs.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+    addEventListener('resize', () => strip.classList.toggle('is-scrollable', thumbs.scrollWidth > thumbs.clientWidth + 1));
     cardHead.addEventListener('click', (e) => {
       if (e.target.closest('a')) return;
       if (!cur?.project) return;

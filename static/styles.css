@@ -41,6 +41,7 @@
   --over-ink: #fff;
   --over-hover: rgba(255, 255, 255, .2);
   --strip: rgba(28, 28, 30, .6);
+  --strip-fade: rgba(28, 28, 30, .9);
   --strip-outline: #fff;
   --lb-dim: rgba(5, 5, 5, .68);
   --lb-dim-m: rgba(5, 5, 5, .72);
@@ -108,6 +109,7 @@
     --over-ink: #111;
     --over-hover: rgba(255, 255, 255, .95);
     --strip: rgba(255, 255, 255, .72);
+    --strip-fade: rgba(255, 255, 255, .95);
     --strip-outline: #111;
     --lb-dim: rgba(243, 243, 241, .68);
     --lb-dim-m: rgba(243, 243, 241, .72);
@@ -402,9 +404,16 @@ body:not([data-view="grid"]) .dock { opacity: 0; pointer-events: none; }
 .lb__bottom { position: absolute; left: 50%; bottom: 36px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .lb__navrow { display: flex; align-items: center; gap: 8px; }
 .lb__marrow { display: none; }
-.lb__strip { padding: 6px; border-radius: 12px; background: var(--strip); border-color: var(--glass-border); -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px); }
-.lb__thumbs { display: flex; gap: 6px; }
-.lb__thumb { position: relative; width: 44px; height: 28px; border-radius: 5px; overflow: hidden; background: var(--tile-bg); opacity: .45; transition: opacity .15s ease; flex: none; }
+/* The strip shows at most 8 thumbs (8 x 44 + 7 x 6 + padding) and scrolls like the phone
+   one: the active thumb is scrolled to the centre, edges fade when there is more. */
+.lb__strip { position: relative; max-width: 406px; padding: 6px; border-radius: 12px; background: var(--strip); border-color: var(--glass-border); overflow: hidden; -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px); }
+.lb__thumbs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
+.lb__thumbs::-webkit-scrollbar { display: none; }
+.lb__strip::before, .lb__strip::after { content: ""; position: absolute; top: 0; bottom: 0; width: 28px; z-index: 1; pointer-events: none; opacity: 0; transition: opacity .2s ease; }
+.lb__strip::before { left: 0; background: linear-gradient(to right, var(--strip-fade), transparent); }
+.lb__strip::after { right: 0; background: linear-gradient(to left, var(--strip-fade), transparent); }
+.lb__strip.is-scrollable::before, .lb__strip.is-scrollable::after { opacity: 1; }
+.lb__thumb { position: relative; width: 44px; height: 28px; border-radius: 5px; overflow: hidden; background: var(--tile-bg); opacity: .45; transition: opacity .15s ease; flex: none; scroll-snap-align: center; }
 .lb__thumb img { width: 100%; height: 100%; object-fit: cover; }
 .lb__thumb::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1.5px var(--strip-outline); opacity: 0; }
 .lb__thumb.is-active { opacity: 1; }
@@ -493,13 +502,9 @@ body[data-view="grid"].lenis-stopped, html.lenis body[data-view="grid"] { height
   .lb__count { order: 0; align-self: center; font-size: 13px; color: var(--ink-50); background: none; padding: 0; }
   .lb__navrow { gap: 8px; }
   .lb__marrow { display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 16px; background: var(--glass-dock); border-color: var(--glass-border); color: var(--ink); flex: none; }
-  .lb__strip { position: relative; flex: 1; min-width: 0; height: 56px; padding: 0; border-radius: 16px; background: var(--glass-dock); overflow: hidden; }
-  .lb__thumbs { height: 100%; align-items: center; padding: 0 8px; gap: 6px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; }
-  .lb__thumbs::-webkit-scrollbar { display: none; }
-  .lb__thumb { width: 54px; height: 36px; border-radius: 6px; scroll-snap-align: center; }
-  .lb__strip::before, .lb__strip::after { content: ""; position: absolute; top: 0; bottom: 0; width: 28px; z-index: 1; pointer-events: none; }
-  .lb__strip::before { left: 0; background: linear-gradient(to right, var(--glass-sheet-m), transparent); }
-  .lb__strip::after { right: 0; background: linear-gradient(to left, var(--glass-sheet-m), transparent); }
+  .lb__strip { flex: 1; max-width: none; min-width: 0; height: 56px; padding: 0; border-radius: 16px; background: var(--glass-dock); --strip-fade: var(--glass-sheet-m); }
+  .lb__thumbs { height: 100%; align-items: center; padding: 0 8px; -webkit-overflow-scrolling: touch; }
+  .lb__thumb { width: 54px; height: 36px; border-radius: 6px; }
   .lb.is-single .lb__bottom { display: flex; }
   .lb.is-single .lb__navrow { justify-content: space-between; }
   .lb.is-single .lb__strip { display: none; }
