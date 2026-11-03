@@ -784,7 +784,8 @@
         countEl.textContent = `${p.assets.indexOf(cur.id) + 1} / ${p.assets.length}`;
         const active = thumbs.querySelector('.is-active');
         strip.classList.toggle('is-scrollable', thumbs.scrollWidth > thumbs.clientWidth + 1);
-        if (active && !scrub.on) requestAnimationFrame(() => active.scrollIntoView({ block: 'nearest', inline: 'center', behavior: reduced ? 'auto' : 'smooth' }));
+        if (scrub.hover) scrub.centreOn(cur.id);
+        else if (active && !scrub.on) requestAnimationFrame(() => active.scrollIntoView({ block: 'nearest', inline: 'center', behavior: reduced ? 'auto' : 'smooth' }));
         // rebuilding the strip drops a focused thumb; keep the keys working
         if (hadThumbFocus && active) active.focus({ preventScroll: true });
       } else { strip.hidden = true; thumbs.innerHTML = ''; delete thumbs.dataset.project; countEl.textContent = ''; }
@@ -999,11 +1000,14 @@
     // thumb under the finger grows and its neighbours spread away (dock style), the piece
     // follows in real time (thumbnail only while moving), the chrome fades, and near the
     // strip's ends the row creeps along so every thumb can be reached.
-    const scrub = { on: false };
+    // Desktop: the same magnification follows the mouse on hover (dock style) without
+    // selecting; a click still jumps.
+    const scrub = { on: false, hover: false };
     {
       const HOLD = 220, GROW = .9, REACH = 96, EDGE = 40, CREEP = 5;
       let timer = 0, start = null, base = 0, px = 0, raf = 0, activeId = null, justScrubbed = 0;
-      const layout = () => {
+      const clampBase = (v) => Math.max(0, Math.min(Math.max(0, thumbs.scrollWidth - thumbs.clientWidth), v));
+      const layout = (select) => {
         const kids = [...thumbs.children]; if (!kids.length) return;
         const tr = thumbs.getBoundingClientRect();              // includes the current translate
         const cs = getComputedStyle(thumbs);
@@ -1022,8 +1026,21 @@
           left += extra[i];
           const d = Math.abs(px - centre(i)); if (d < bd) { bd = d; best = i; }
         });
+        if (!select) return;
         const id = kids[best].dataset.id;
         if (id !== activeId) { activeId = id; jump(id, { lite: true, push: false }); }
+      };
+      const lift = () => {                                      // carry the scroll into a transform so the row can overflow
+        base = thumbs.scrollLeft;
+        thumbs.classList.add('is-scrubbing'); strip.classList.add('is-magnified');
+        thumbs.scrollLeft = 0; thumbs.style.transform = `translateX(${-base}px)`;
+      };
+      const settle = () => {
+        cancelAnimationFrame(raf);
+        thumbs.classList.remove('is-scrubbing'); strip.classList.remove('is-magnified'); thumbs.classList.add('is-settling');
+        for (const k of thumbs.children) { k.style.transform = ''; k.style.zIndex = ''; }
+        thumbs.style.transform = ''; thumbs.scrollLeft = base;  // hand the position back to the scroller
+        setTimeout(() => thumbs.classList.remove('is-settling'), 300);
       };
       const tick = () => {
         raf = requestAnimationFrame(tick);
@@ -1031,13 +1048,11 @@
         const max = Math.max(0, thumbs.scrollWidth - thumbs.clientWidth);
         if (px < sr.left + EDGE) base = Math.max(0, base - CREEP); else if (px > sr.right - EDGE) base = Math.min(max, base + CREEP);
         thumbs.style.transform = `translateX(${-base}px)`;
-        layout();
+        layout(true);
       };
       const begin = () => {
         timer = 0; scrub.on = true; activeId = cur ? cur.id : null;
-        base = thumbs.scrollLeft;                               // carry the scroll into a transform so the row can overflow
-        thumbs.classList.add('is-scrubbing'); el.classList.add('is-scrubbing');
-        thumbs.scrollLeft = 0; thumbs.style.transform = `translateX(${-base}px)`;
+        lift(); el.classList.add('is-scrubbing');
         try { strip.setPointerCapture(start.pid); } catch (_) {}
         wake(); tick();
       };
@@ -1045,14 +1060,24 @@
         if (timer) { clearTimeout(timer); timer = 0; }
         start = null;
         if (!scrub.on) return;
-        scrub.on = false; cancelAnimationFrame(raf);
-        el.classList.remove('is-scrubbing'); thumbs.classList.remove('is-scrubbing'); thumbs.classList.add('is-settling');
-        for (const k of thumbs.children) { k.style.transform = ''; k.style.zIndex = ''; }
-        thumbs.style.transform = ''; thumbs.scrollLeft = base;  // hand the position back to the scroller
-        setTimeout(() => thumbs.classList.remove('is-settling'), 300);
+        scrub.on = false; el.classList.remove('is-scrubbing');
+        settle();
         justScrubbed = setTimeout(() => { justScrubbed = 0; }, 400);   // the click that follows the release is not a jump
         if (cur) { jump(cur.id); }                              // the real layer for where we landed, and the URL
       };
+      // desktop hover: magnify under the mouse, no creep, no selection
+      let goal = 0;                                             // hover: the row glides to its goal (a click centres, the wheel nudges)
+      const hoverTick = () => { raf = requestAnimationFrame(hoverTick); base += (goal - base) * .22; if (Math.abs(goal - base) < .5) base = goal; thumbs.style.transform = `translateX(${-base}px)`; layout(false); };
+      scrub.scrollBy = (d) => { goal = clampBase(goal + d); };
+      scrub.centreOn = (id) => { if (!scrub.hover) return; const i = [...thumbs.children].findIndex((k) => k.dataset.id === id); if (i < 0) return; const w = thumbs.children[0].offsetWidth, gap = parseFloat(getComputedStyle(thumbs).gap) || 6; goal = clampBase(i * (w + gap) + w / 2 - thumbs.clientWidth / 2); };
+      if (hoverable) {
+        strip.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'mouse' || !thumbs.children.length || scrub.hover) return; scrub.hover = true; px = e.clientX; lift(); goal = base; hoverTick(); });
+        strip.addEventListener('pointerleave', () => {
+          if (!scrub.hover) return; scrub.hover = false; settle();
+          const i = [...thumbs.children].findIndex((k) => k.classList.contains('is-active'));   // finish any glide the leave cut short
+          if (i >= 0) { const w = thumbs.children[0].offsetWidth, gap = parseFloat(getComputedStyle(thumbs).gap) || 6; requestAnimationFrame(() => thumbs.scrollTo({ left: clampBase(i * (w + gap) + w / 2 - thumbs.clientWidth / 2), behavior: reduced ? 'auto' : 'smooth' })); }
+        });
+      }
       // the whole strip is the hit area, not just a thumb
       strip.addEventListener('pointerdown', (e) => {
         if (hoverable || e.pointerType === 'mouse' || !thumbs.children.length) return;
@@ -1060,6 +1085,7 @@
         timer = setTimeout(begin, HOLD);
       });
       strip.addEventListener('pointermove', (e) => {
+        if (scrub.hover) px = e.clientX;
         if (!start) return;
         px = e.clientX;
         if (!scrub.on && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 8) { clearTimeout(timer); timer = 0; start = null; }   // a scroll, not a hold
@@ -1091,7 +1117,7 @@
     $('lb-mnext').addEventListener('click', () => step(1));
     thumbs.addEventListener('click', (e) => { const t = e.target.closest('[data-id]'); if (t) jump(t.dataset.id); });
     // a mouse wheel scrolls the strip sideways (trackpads already do)
-    thumbs.addEventListener('wheel', (e) => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && thumbs.scrollWidth > thumbs.clientWidth) { thumbs.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+    thumbs.addEventListener('wheel', (e) => { const d = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX; if (thumbs.scrollWidth > thumbs.clientWidth) { if (scrub.hover) scrub.scrollBy(d); else thumbs.scrollLeft += d; e.preventDefault(); } }, { passive: false });
     addEventListener('resize', () => strip.classList.toggle('is-scrollable', thumbs.scrollWidth > thumbs.clientWidth + 1));
     cardHead.addEventListener('click', (e) => {
       if (e.target.closest('a')) return;
