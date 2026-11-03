@@ -503,14 +503,16 @@ body[data-view="grid"].lenis-stopped, html.lenis body[data-view="grid"] { height
   .lb__bg { background: var(--lb-dim-m); }
   .lb__stage { inset: 16px 16px 100px; }   /* top and bottom limits come from the card and the nav row (main.js) */
   .lb__scrim { display: none; }
-  .lb__close { top: max(16px, calc(env(safe-area-inset-top) + 16px)); right: 16px; width: 44px; height: 44px; border-radius: 12px; background: var(--glass-dock); border-color: var(--glass-border); color: var(--ink); transition: opacity .2s ease; }
+  .lb__close { top: max(16px, calc(env(safe-area-inset-top) + 16px)); right: 16px; width: 52px; height: 52px; border-radius: 14px; background: var(--glass-dock); border-color: var(--glass-border); color: var(--ink); transition: opacity .2s ease; }
   .lb__arrow { display: none; }
   .lb__bottom { left: 8px; right: 8px; bottom: max(8px, calc(env(safe-area-inset-bottom) + 4px)); transform: none; align-items: stretch; gap: 10px; }
   .lb__count { order: 0; align-self: center; font-size: 13px; color: var(--ink-50); background: none; padding: 0; }
   .lb__navrow { gap: 8px; }
-  .lb__marrow { display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: 16px; background: var(--glass-dock); border-color: var(--glass-border); color: var(--ink); flex: none; }
+  .lb__marrow { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; background: var(--glass); border-color: var(--glass-border); color: var(--ink); flex: none; opacity: .55; }
   .lb__strip { flex: 1; max-width: none; min-width: 0; height: 56px; padding: 0; border-radius: 16px; --strip-fade: var(--glass-sheet-m); }
-  .lb__strip-bg { background: var(--glass-dock); }
+  .lb__strip-bg { display: none; }                         /* no glass behind the thumbs */
+  .lb__strip::before, .lb__strip::after { display: none; }
+  .lb__navrow { align-items: center; }
   .lb__thumbs { height: 100%; align-items: center; padding: 0 8px; -webkit-overflow-scrolling: touch; }
   .lb__thumb { width: 54px; height: 36px; border-radius: 6px; }
   .lb.is-single .lb__bottom { display: flex; }
@@ -519,8 +521,9 @@ body[data-view="grid"].lenis-stopped, html.lenis body[data-view="grid"] { height
   /* the project card becomes the info tray */
   /* the project card sits at the top beside the close button and opens downward over the
      asset; the count, arrows and filmstrip take the bottom */
-  .lb__card { top: max(16px, calc(env(safe-area-inset-top) + 16px)); left: 16px; right: 68px; bottom: auto; width: auto; border-radius: 14px; background: var(--glass-sheet-m); border: 1px solid var(--glass-border); box-shadow: none; transition: opacity .2s ease; }
-  .lb__cardhead { padding: 12px 10px 12px 16px; }
+  .lb__card { top: max(16px, calc(env(safe-area-inset-top) + 16px)); left: 16px; right: 76px; bottom: auto; width: auto; border-radius: 14px; background: var(--glass-sheet-m); border: 1px solid var(--glass-border); box-shadow: none; transition: opacity .2s ease; }
+  .lb__cardhead { box-sizing: border-box; height: 50px; padding: 0 10px 0 14px; }   /* 50 + the card border = the 52px close button */
+  .lb__cardtext { gap: 1px; }
   .lb__handle { display: none; }
   .lb__card.is-open { padding-bottom: 8px; }
   .lb__cardbody { padding: 0 16px 16px; }
