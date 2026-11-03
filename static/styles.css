@@ -507,13 +507,17 @@ body[data-view="grid"].lenis-stopped, html.lenis body[data-view="grid"] { height
   .lb__arrow { display: none; }
   .lb__bottom { left: 8px; right: 8px; bottom: max(8px, calc(env(safe-area-inset-bottom) + 4px)); transform: none; align-items: stretch; gap: 10px; }
   .lb__count { order: 0; align-self: center; font-size: 13px; color: var(--ink-50); background: none; padding: 0; }
-  .lb__navrow { gap: 8px; }
-  .lb__marrow { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; background: var(--glass); border-color: var(--glass-border); color: var(--ink); flex: none; opacity: .55; }
-  .lb__strip { flex: 1; max-width: none; min-width: 0; height: 56px; padding: 0; border-radius: 16px; --strip-fade: var(--glass-sheet-m); }
+  /* the thumbs run the full width under the arrows and fade out behind them (an alpha
+     mask, so it works with no strip background); the arrows sit on top at each end */
+  .lb__navrow { position: relative; gap: 0; min-height: 40px; }
+  .lb__marrow { position: absolute; top: 50%; z-index: 2; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; background: var(--glass); border-color: var(--glass-border); color: var(--ink); flex: none; opacity: .55; transform: translateY(-50%); }
+  #lb-mprev { left: 0; } #lb-mnext { right: 0; }
+  .lb__strip { flex: 1; max-width: none; min-width: 0; height: 56px; padding: 0; border-radius: 0; -webkit-mask-image: linear-gradient(to right, transparent 0, #000 72px, #000 calc(100% - 72px), transparent 100%); mask-image: linear-gradient(to right, transparent 0, #000 72px, #000 calc(100% - 72px), transparent 100%); }
+  .lb.is-scrubbing .lb__strip { -webkit-mask-image: none; mask-image: none; }   /* the grown thumbs must not be clipped */
   .lb__strip-bg { display: none; }                         /* no glass behind the thumbs */
   .lb__strip::before, .lb__strip::after { display: none; }
   .lb__navrow { align-items: center; }
-  .lb__thumbs { height: 100%; align-items: center; padding: 0 8px; -webkit-overflow-scrolling: touch; }
+  .lb__thumbs { height: 100%; align-items: center; padding: 0 56px; -webkit-overflow-scrolling: touch; }   /* a thumb can scroll clear of the arrows */
   .lb__thumb { width: 54px; height: 36px; border-radius: 6px; }
   .lb.is-single .lb__bottom { display: flex; }
   .lb.is-single .lb__navrow { justify-content: space-between; }
