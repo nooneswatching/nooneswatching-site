@@ -427,7 +427,7 @@ body:not([data-view="grid"]) .dock { opacity: 0; pointer-events: none; }
 .lb__thumb img { width: 100%; height: 100%; object-fit: cover; }
 .lb__thumb.is-active { opacity: 1; }
 .lb__thumb:hover { opacity: .8; }
-.lb__count { order: 2; font-size: 12px; color: var(--count-ink); background: var(--count-bg); padding: 3px 8px; border-radius: 6px; }
+.lb__count { order: 0; font-size: 12px; color: var(--count-ink); background: var(--count-bg); padding: 3px 8px; border-radius: 6px; }
 .lb__count:empty { display: none; }
 .lb.is-single .lb__count { display: none; }
 .lb.is-single .lb__bottom { display: none; }
@@ -527,7 +527,7 @@ body[data-view="grid"].lenis-stopped, html.lenis body[data-view="grid"] { height
   /* the project card sits at the top beside the close button and opens downward over the
      asset; the count, arrows and filmstrip take the bottom */
   .lb__card { top: max(16px, calc(env(safe-area-inset-top) + 16px)); left: 16px; right: 76px; bottom: auto; width: auto; border-radius: 14px; background: var(--glass-sheet-m); border: 1px solid var(--glass-border); box-shadow: none; transition: opacity .2s ease; }
-  .lb__cardhead { box-sizing: border-box; height: 50px; padding: 0 10px 0 14px; }   /* 50 + the card border = the 52px close button */
+  .lb__cardhead { box-sizing: border-box; height: 50px; padding: 0 16px; }   /* 50 + the card border = the 52px close button; 16px each side like the body */
   .lb__cardtext { gap: 1px; }
   .lb__handle { display: none; }
   .lb__card.is-open { padding-bottom: 8px; }
