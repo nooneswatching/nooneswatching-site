@@ -684,17 +684,20 @@
     // The lightbox shows the very same pixels the tile shows, so the scale up and down is
     // one continuous object: images start from the tile's thumbnail and upgrade to the full
     // file once it has decoded; a playing tile video is adopted mid-play and handed back.
-    function buildMedia(a, tile = null) {
+    function buildMedia(a, tile = null, lite = false) {
       const box = document.createElement('div');
       box.className = 'lb__media';
       if (a.media.bg) box.style.background = a.media.bg;
-      box.appendChild(buildLayer(a, tile));
+      box.appendChild(buildLayer(a, tile, lite));
       return box;
     }
     // one picture inside the box: img, video (the tile's own, adopted) or placeholder
-    function buildLayer(a, tile = null) {
+    function buildLayer(a, tile = null, lite = false) {
       const m = a.media;
       if (m.type === 'placeholder') { const ph = document.createElement('span'); ph.className = 'tile__ph'; ph.textContent = m.label || a.title; return ph; }
+      if (lite) {                                               // scrubbing: the thumbnail only, no clip, no full file
+        const img = document.createElement('img'); img.alt = a.title; img.decoding = 'sync'; img.src = m.thumb || m.poster || m.src; img.dataset.lite = ''; return img;
+      }
       if (m.type === 'video') {
         // The tile's clip is the 640px grid proxy. Adopted, it is the very pixels that fly up,
         // so the open is seamless; the master then fades in over it, picking up at the same
@@ -749,7 +752,7 @@
       }
     }
 
-    function render({ fromTile = null } = {}) {
+    function render({ fromTile = null, lite = false } = {}) {
       const a = assets[cur.id];
       const p = cur.project ? projectById[cur.project] : null;
       el.classList.toggle('is-single', !p);
@@ -772,18 +775,22 @@
       // filmstrip + count
       const hadThumbFocus = document.activeElement && document.activeElement.classList.contains('lb__thumb');
       if (p) {
-        thumbs.innerHTML = p.assets.map((id, i) => {
-          const x = assets[id];
-          return `<button type="button" class="lb__thumb${id === cur.id ? ' is-active' : ''}" data-id="${id}" role="listitem" aria-label="${esc(x.title)} ${i + 1} of ${p.assets.length}"${id === cur.id ? ' aria-current="true"' : ''}>${x.media.thumb ? `<img src="${x.media.thumb}" alt="">` : ''}</button>`;
-        }).join('');
+        if (thumbs.dataset.project !== p.id) {
+          thumbs.dataset.project = p.id;
+          thumbs.innerHTML = p.assets.map((id, i) => {
+            const x = assets[id];
+            return `<button type="button" class="lb__thumb" data-id="${id}" role="listitem" aria-label="${esc(x.title)} ${i + 1} of ${p.assets.length}">${x.media.thumb ? `<img src="${x.media.thumb}" alt="" draggable="false">` : ''}</button>`;
+          }).join('');
+        }
+        for (const t of thumbs.children) { const on = t.dataset.id === cur.id; t.classList.toggle('is-active', on); if (on) t.setAttribute('aria-current', 'true'); else t.removeAttribute('aria-current'); }
         strip.hidden = false;
         countEl.textContent = `${p.assets.indexOf(cur.id) + 1} / ${p.assets.length}`;
         const active = thumbs.querySelector('.is-active');
         strip.classList.toggle('is-scrollable', thumbs.scrollWidth > thumbs.clientWidth + 1);
-        if (active) requestAnimationFrame(() => active.scrollIntoView({ block: 'nearest', inline: 'center', behavior: reduced ? 'auto' : 'smooth' }));
+        if (active && !scrub.on) requestAnimationFrame(() => active.scrollIntoView({ block: 'nearest', inline: 'center', behavior: reduced ? 'auto' : 'smooth' }));
         // rebuilding the strip drops a focused thumb; keep the keys working
         if (hadThumbFocus && active) active.focus({ preventScroll: true });
-      } else { strip.hidden = true; thumbs.innerHTML = ''; countEl.textContent = ''; }
+      } else { strip.hidden = true; thumbs.innerHTML = ''; delete thumbs.dataset.project; countEl.textContent = ''; }
       if (isOpen() && !el.contains(document.activeElement)) el.focus({ preventScroll: true });
       syncTray();                                               // the bottom row sits on the tray: measure it now, not a frame later
       // media: the same box stays and morphs to the next piece's shape while the picture
@@ -793,19 +800,20 @@
         // in over the old one, which keeps its own size until it is gone. Boxes are never
         // resized in place: iOS keeps a stale clip on a resized box for several frames.
         const olds = [...assetEl.children];
-        const nb = buildMedia(a);
+        const nb = buildMedia(a, null, lite);
         media = nb;
         assetEl.appendChild(nb);
         sizeMedia();
         const drop = () => olds.forEach((o) => { if (o.isConnected) { returnVideo(o); o.remove(); } });
         if (!reduced) {
+          const dur = lite ? 110 : 240;                           // scrubbing: quick, it has to feel live
           olds.forEach((o) => {
             o._flipping = false;
             if (o._out) return;                                   // already fading out
             if (o._in) o._in.cancel();
-            o._out = o.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 240, easing: 'ease-in', fill: 'forwards' });
+            o._out = o.animate([{ opacity: 1 }, { opacity: 0 }], { duration: dur, easing: 'ease-in', fill: 'forwards' });
           });
-          nb._in = nb.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: 'ease' });
+          nb._in = nb.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur, easing: 'ease' });
           nb._in.onfinish = () => { nb._in = null; drop(); };
         } else drop();
       } else {
@@ -982,12 +990,86 @@
       push(true);
       wake();
     }
-    function jump(id) {
+    function jump(id, { lite = false, push: doPush = true } = {}) {
       if (!cur) return;
       cur.id = id;
       state.open = { id, project: cur.project };
-      render();
-      push(true);
+      render({ lite });
+      if (doPush) push(true);
+    }
+
+    // Phones: press and hold a thumb, then drag along the strip to scrub the project. The
+    // thumb under the finger grows and its neighbours spread away (dock style), the piece
+    // follows in real time (thumbnail only while moving), the chrome fades, and near the
+    // strip's ends the row creeps along so every thumb can be reached.
+    const scrub = { on: false };
+    {
+      const HOLD = 220, GROW = .9, REACH = 96, EDGE = 40, CREEP = 5;
+      let timer = 0, start = null, base = 0, px = 0, raf = 0, activeId = null, justScrubbed = 0;
+      const layout = () => {
+        const kids = [...thumbs.children]; if (!kids.length) return;
+        const tr = thumbs.getBoundingClientRect();              // includes the current translate
+        const cs = getComputedStyle(thumbs);
+        const w = kids[0].offsetWidth, gap = parseFloat(cs.gap) || 6, pitch = w + gap, pad = parseFloat(cs.paddingLeft) || 0;
+        const centre = (i) => tr.left + pad + i * pitch + w / 2;  // each thumb's untransformed centre on screen
+        // scale from distance to the finger (cosine falloff), extra width per thumb
+        const sc = kids.map((_, i) => { const d = Math.abs(px - centre(i)); return d >= REACH ? 1 : 1 + GROW * (0.5 + 0.5 * Math.cos(Math.PI * d / REACH)); });
+        const extra = sc.map((v) => (v - 1) * w);
+        let left = 0, right = extra.reduce((p, c) => p + c, 0);
+        let best = 0, bd = 1e9;
+        kids.forEach((k, i) => {
+          right -= extra[i];
+          const shift = (left - right) / 2;                     // neighbours pushed away from the finger
+          k.style.transform = `translateX(${shift.toFixed(1)}px) scale(${sc[i].toFixed(3)})`;
+          k.style.zIndex = sc[i] > 1.01 ? String(10 + Math.round(sc[i] * 10)) : '';
+          left += extra[i];
+          const d = Math.abs(px - centre(i)); if (d < bd) { bd = d; best = i; }
+        });
+        const id = kids[best].dataset.id;
+        if (id !== activeId) { activeId = id; jump(id, { lite: true, push: false }); }
+      };
+      const tick = () => {
+        raf = requestAnimationFrame(tick);
+        const sr = strip.getBoundingClientRect();
+        const max = Math.max(0, thumbs.scrollWidth - thumbs.clientWidth);
+        if (px < sr.left + EDGE) base = Math.max(0, base - CREEP); else if (px > sr.right - EDGE) base = Math.min(max, base + CREEP);
+        thumbs.style.transform = `translateX(${-base}px)`;
+        layout();
+      };
+      const begin = () => {
+        timer = 0; scrub.on = true; activeId = cur ? cur.id : null;
+        base = thumbs.scrollLeft;                               // carry the scroll into a transform so the row can overflow
+        thumbs.classList.add('is-scrubbing'); el.classList.add('is-scrubbing');
+        thumbs.scrollLeft = 0; thumbs.style.transform = `translateX(${-base}px)`;
+        try { thumbs.setPointerCapture(start.pid); } catch (_) {}
+        wake(); tick();
+      };
+      const end = () => {
+        if (timer) { clearTimeout(timer); timer = 0; }
+        start = null;
+        if (!scrub.on) return;
+        scrub.on = false; cancelAnimationFrame(raf);
+        el.classList.remove('is-scrubbing'); thumbs.classList.remove('is-scrubbing'); thumbs.classList.add('is-settling');
+        for (const k of thumbs.children) { k.style.transform = ''; k.style.zIndex = ''; }
+        thumbs.style.transform = ''; thumbs.scrollLeft = base;  // hand the position back to the scroller
+        setTimeout(() => thumbs.classList.remove('is-settling'), 300);
+        justScrubbed = setTimeout(() => { justScrubbed = 0; }, 400);   // the click that follows the release is not a jump
+        if (cur) { jump(cur.id); }                              // the real layer for where we landed, and the URL
+      };
+      thumbs.addEventListener('pointerdown', (e) => {
+        if (hoverable || e.pointerType === 'mouse') return;
+        const t = e.target.closest('.lb__thumb'); if (!t) return;
+        start = { x: e.clientX, y: e.clientY, pid: e.pointerId }; px = e.clientX;
+        timer = setTimeout(begin, HOLD);
+      });
+      thumbs.addEventListener('pointermove', (e) => {
+        if (!start) return;
+        px = e.clientX;
+        if (!scrub.on && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 8) { clearTimeout(timer); timer = 0; start = null; }   // a scroll, not a hold
+      });
+      thumbs.addEventListener('touchmove', (e) => { if (scrub.on) e.preventDefault(); }, { passive: false });
+      thumbs.addEventListener('pointerup', end); thumbs.addEventListener('pointercancel', end);
+      thumbs.addEventListener('click', (e) => { if (scrub.on || justScrubbed) { e.stopImmediatePropagation(); e.preventDefault(); } }, true);
     }
 
     // auto-hide
