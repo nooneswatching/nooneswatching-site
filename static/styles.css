@@ -193,6 +193,7 @@ body.lb-open .logo { opacity: 0; pointer-events: none; }
 body:not([data-view="grid"]) .grid { display: none; }
 .canvas { position: absolute; inset: 0; overflow: hidden; contain: paint; cursor: grab; touch-action: none; overscroll-behavior: none; user-select: none; -webkit-user-select: none; } /* clipped: the lightbox blur then rasters one screen, not every tile that hangs off it */
 .canvas.is-dragging { cursor: grabbing; }
+.tile.is-opened { visibility: hidden; }   /* the lightbox box stands in for it */
 body.lb-open .canvas .tile:not(.is-hover) { opacity: .5; }
 .canvas__layer { position: absolute; left: 0; top: 0; will-change: transform; }
 .tile { position: absolute; left: 0; top: 0; width: var(--tw); height: var(--th); border-radius: var(--r-tile); overflow: hidden; background: var(--tile-bg); color: var(--ink); transform-origin: center; -webkit-user-drag: none; transition: transform .3s var(--ease-out), opacity .3s ease, box-shadow .3s ease; }

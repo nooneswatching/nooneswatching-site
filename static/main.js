@@ -411,10 +411,14 @@
       if (!this.hover) return;
       this.hover.classList.remove('is-hover'); this.hover = null; this.root.classList.remove('has-hover');
     }
+    // the tile the lightbox opened from stays hidden under the box until the close has landed
+    hideTile(id) { this.hiddenId = id; for (const el of this.tiles.values()) el.classList.toggle('is-opened', el.dataset.id === id); }
+    showTiles() { this.hiddenId = null; for (const el of this.tiles.values()) el.classList.remove('is-opened'); }
     makeTile(id, x, y, h) {
       const a = assets[id];
       const el = document.createElement('a');
       el.className = 'tile';
+      if (id === this.hiddenId) el.classList.add('is-opened');
       el.href = a.url;
       el.dataset.id = id;
       el.setAttribute('aria-label', a.inProject ? `${a.title}, ${projectById[a.projectId].title}` : a.title);
@@ -915,6 +919,7 @@
         // the close fades leave fill:forwards animations behind; clear them before reopening
         [ui, el.querySelector('.lb__bg')].forEach((x) => x.getAnimations().forEach((a) => a.cancel()));
         if (!tile) canvas.release();
+        if (tile) { canvas.clearHover(); canvas.hideTile(id); }   // the box shows its pixels from the first frame
         lastFocus = document.activeElement;
         el.hidden = false;
         // the blur behind the lightbox is the expensive raster; let the first zoom frame
@@ -947,6 +952,7 @@
       const finish = () => {
         el.hidden = true;
         [...assetEl.children].forEach((o) => { returnVideo(o); o.remove(); }); media = null;
+        canvas.showTiles();                                     // the box is gone: the tile takes over in the same frame
         [ui, el.querySelector('.lb__bg')].forEach((x) => x.getAnimations().forEach((a) => a.cancel()));
         if (state.view === 'grid') canvas.resume(); else if (lenis) lenis.start();
         if (lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true }); else $('canvas').focus({ preventScroll: true });
