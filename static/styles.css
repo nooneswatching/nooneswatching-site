@@ -415,8 +415,6 @@ body:not([data-view="grid"]) .dock { opacity: 0; pointer-events: none; }
 /* scrubbing (phones): the row overflows its strip so the held thumb can grow out of it, the
    chrome steps back, and on release the thumbs ease home */
 .lb__thumbs.is-scrubbing, .lb.is-scrubbing .lb__strip { overflow: visible; }
-/* desktop hover: the row may rise above the strip but is still cut at the strip's sides */
-.lb__strip.is-magnified { overflow: visible; clip-path: inset(-80px 0 0 0); }
 .lb.is-scrubbing .lb__strip::before, .lb.is-scrubbing .lb__strip::after { opacity: 0; }
 /* the strip's glass is its own layer so it can fade out while thumbs break out of it */
 .lb__strip-bg { position: absolute; inset: 0; border-radius: inherit; background: var(--strip); border: 1px solid var(--glass-border); -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px); transition: opacity .15s ease; pointer-events: none; }
