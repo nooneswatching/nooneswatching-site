@@ -42,7 +42,6 @@
   --over-hover: rgba(255, 255, 255, .2);
   --strip: rgba(28, 28, 30, .6);
   --strip-fade: rgba(28, 28, 30, .9);
-  --strip-outline: #fff;
   --lb-dim: rgba(5, 5, 5, .68);
   --lb-dim-m: rgba(5, 5, 5, .72);
   --lb-scrim: rgba(0, 0, 0, .55);
@@ -110,7 +109,6 @@
     --over-hover: rgba(255, 255, 255, .95);
     --strip: rgba(255, 255, 255, .72);
     --strip-fade: rgba(255, 255, 255, .95);
-    --strip-outline: #111;
     --lb-dim: rgba(243, 243, 241, .68);
     --lb-dim-m: rgba(243, 243, 241, .72);
     --lb-scrim: transparent;
@@ -426,9 +424,7 @@ body:not([data-view="grid"]) .dock { opacity: 0; pointer-events: none; }
 .lb.is-scrubbing .lb__close, .lb.is-scrubbing .lb__count, .lb.is-scrubbing .lb__card, .lb.is-scrubbing .lb__marrow { opacity: 0; pointer-events: none; }
 .lb__count, .lb__marrow { transition: opacity .2s ease; }
 .lb__thumb img { width: 100%; height: 100%; object-fit: cover; }
-.lb__thumb::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1.5px var(--strip-outline); opacity: 0; }
 .lb__thumb.is-active { opacity: 1; }
-.lb__thumb.is-active::after { opacity: 1; }
 .lb__thumb:hover { opacity: .8; }
 .lb__count { order: 2; font-size: 12px; color: var(--count-ink); background: var(--count-bg); padding: 3px 8px; border-radius: 6px; }
 .lb__count:empty { display: none; }
