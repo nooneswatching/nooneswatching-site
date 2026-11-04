@@ -346,7 +346,7 @@ body.lb-open .canvas, body.lb-open .list, body.lb-open .info { transition: filte
 body.lb-open .dock, body.lb-open .views { opacity: 0; pointer-events: none; }
 body[data-noblur] .canvas, body[data-noblur] .list, body[data-noblur] .info { filter: none !important; }
 /* Safari A/B flags (see main.js): what the page costs without its glass and hover effects */
-body[data-noglass] .glass, body[data-noglass] .dock__btn::before, body[data-noglass] .tile__label, body[data-noglass] .lb__card, body[data-noglass] .lb__close, body[data-noglass] .lb__arrow, body[data-noglass] .lb__strip-bg { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+body[data-noglass] .glass, body[data-noglass] .dock__btn::before, body[data-noglass] .tile__label, body[data-noglass] .lb__card::before, body[data-noglass] .lb__close, body[data-noglass] .lb__arrow, body[data-noglass] .lb__strip-bg { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 body[data-noglass] .logo { mix-blend-mode: normal !important; }
 body[data-nohover] .tile.is-hover { transform: none !important; box-shadow: none !important; }
 body[data-squarevideo] .tile:has(video) { border-radius: 0 !important; }
@@ -375,7 +375,12 @@ body:not([data-view="grid"]) .dock { opacity: 0; pointer-events: none; }
 .lb__dim { position: absolute; inset: 0; display: none; }
 .lb__stage, .lb__close, .lb__bottom { transition: filter .3s ease; }
 
-.lb__card { position: absolute; top: 40px; left: 40px; width: 340px; border-radius: var(--r-lb); background: var(--card-bg); color: var(--card-ink); box-shadow: var(--card-shadow); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); overflow: hidden; }
+/* The card's glass is a pseudo-element (like the dock button's) so hover can swell the
+   background alone; the card clips only while its height animates. */
+.lb__card { position: absolute; top: 40px; left: 40px; width: 340px; border-radius: var(--r-lb); color: var(--card-ink); isolation: isolate; }
+.lb__card::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--card-bg); box-shadow: var(--card-shadow); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); transition: transform .25s var(--ease-out); }
+.lb__card.is-sizing { overflow: hidden; }
+@media (hover: hover) { .lb:not(.is-single) .lb__card:not(.is-open):hover::before { transform: scale(1.04); } }
 .lb__cardhead { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 12px 12px 16px; text-align: left; color: inherit; }
 .lb__handle { display: none; }
 .lb__cardtext { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
@@ -383,7 +388,7 @@ body:not([data-view="grid"]) .dock { opacity: 0; pointer-events: none; }
 .lb__sub { font-size: 13px; line-height: 1.2; color: var(--card-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lb__sub a { text-decoration: underline; text-underline-offset: 2px; }
 .lb__sub a:hover { color: var(--card-ink); }
-.lb__toggle { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: var(--card-toggle); flex: none; transition: transform .3s var(--ease-out); }
+.lb__toggle { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; flex: none; transition: transform .3s var(--ease-out); }   /* no box: the chevron alone */
 .lb__card.is-open .lb__toggle { transform: rotate(180deg); }
 .lb.is-single .lb__toggle { display: none; }
 .lb.is-single .lb__cardhead { cursor: default; }
@@ -526,7 +531,8 @@ body[data-view="grid"].lenis-stopped, html.lenis body[data-view="grid"] { height
   /* the project card becomes the info tray */
   /* the project card sits at the top beside the close button and opens downward over the
      asset; the count, arrows and filmstrip take the bottom */
-  .lb__card { top: max(16px, calc(env(safe-area-inset-top) + 16px)); left: 16px; right: 76px; bottom: auto; width: auto; border-radius: 14px; background: var(--glass-sheet-m); border: 1px solid var(--glass-border); box-shadow: none; transition: opacity .2s ease; }
+  .lb__card { top: max(16px, calc(env(safe-area-inset-top) + 16px)); left: 16px; right: 76px; bottom: auto; width: auto; border-radius: 14px; transition: opacity .2s ease; }
+  .lb__card::before { background: var(--glass-sheet-m); border: 1px solid var(--glass-border); box-shadow: none; }
   .lb__cardhead { box-sizing: border-box; height: 50px; padding: 0 16px; }   /* 50 + the card border = the 52px close button; 16px each side like the body */
   .lb__cardtext { gap: 1px; }
   .lb__handle { display: none; }

@@ -900,7 +900,7 @@
       if (animate && !reduced && wasOpen !== open) {
         // grow or shrink from the anchored edge (top-left on desktop, bottom on phones)
         const h1 = card.offsetHeight;
-        if (h0 !== h1) card.animate([{ height: `${h0}px` }, { height: `${h1}px` }], { duration: 340, easing: 'cubic-bezier(.22,1,.36,1)' });
+        if (h0 !== h1) { card.classList.add('is-sizing'); card.animate([{ height: `${h0}px` }, { height: `${h1}px` }], { duration: 340, easing: 'cubic-bezier(.22,1,.36,1)' }).onfinish = () => card.classList.remove('is-sizing'); }
         if (open) cardBody.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, delay: 100, easing: 'ease-out', fill: 'backwards' });
       }
     }
