@@ -380,7 +380,9 @@ body:not([data-view="grid"]) .dock { opacity: 0; pointer-events: none; }
 .lb__card { position: absolute; top: 40px; left: 40px; width: 340px; border-radius: var(--r-lb); color: var(--card-ink); isolation: isolate; }
 .lb__card::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--card-bg); box-shadow: var(--card-shadow); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); transition: transform .25s var(--ease-out); }
 .lb__card.is-sizing { overflow: hidden; }
-@media (hover: hover) { .lb:not(.is-single) .lb__card:not(.is-open):hover::before { transform: scale(1.04); } }
+/* the hover hints at the open: the glass grows downward only, anchored at the top */
+.lb__card::before { transform-origin: 50% 0; }
+@media (hover: hover) { .lb:not(.is-single) .lb__card:not(.is-open):hover::before { transform: scaleY(1.12); } }
 .lb__cardhead { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 12px 12px 16px; text-align: left; color: inherit; }
 .lb__handle { display: none; }
 .lb__cardtext { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
