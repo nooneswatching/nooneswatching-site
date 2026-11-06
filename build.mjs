@@ -189,6 +189,7 @@ const infoView = () => `<section class="info" id="info" hidden>
 // ---- lightbox -------------------------------------------------------------------
 const lightbox = () => `<div class="lb" id="lb" hidden role="dialog" aria-modal="true" aria-label="Work" tabindex="-1">
   <div class="lb__bg"></div>
+  <div class="lb__scroll" id="lb-scroll" hidden tabindex="-1"><div class="lb__case" id="lb-case"></div></div>
   <div class="lb__stage" id="lb-stage">
     <figure class="lb__asset" id="lb-asset"></figure>
     <div class="lb__scrim"></div>

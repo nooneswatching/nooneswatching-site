@@ -75,11 +75,16 @@ in `dist/` with its own title/OG tags; main.js reads `location` on boot.
   `REPEAT_SMALL_SETS` in main.js is the open question (repeat vs finite canvas). The filter
   dock exists on the grid only: the Index always lists everything and Info has nothing to
   filter; a lightbox opened from the Index walks every piece.
-- Lightbox: left/right walk the whole filmstrip first, then move on through the current
-  filter's grid order (skipping further tiles of the project just finished) and enter the
-  next project at its first asset going forward, its last going backward. Project
-  assets show the project card (expands downward over the asset, never resizes it) and a
-  filmstrip; singles show title + caption + "From <project> ↗". Controls auto-hide after
+- Lightbox: a project is a vertical page (`.lb__scroll`): rows like the v1 case pages,
+  landscape assets full width, portrait and square ones paired; pictures upgrade and clips
+  play near the viewport. The asset under the focus line (40% down) is the current one
+  (thumb, count, URL). Thumbs and the phone scrub scroll to assets. Left/right leave the
+  project for the next piece or project in the current filter's grid order, entering a
+  project at its top going forward and its bottom going back. The open and close flights
+  fly between the tile and the asset's place in the page. Desktop: card + vertical strip
+  in a left column; phones: card on top, strip at the bottom. The card expands downward
+  over the page and never resizes it. Singles show one asset with title + caption +
+  "From <project> ↗". Controls auto-hide after
   2s without pointer movement on desktop only; on phones they never hide.
 - Mobile sheets expand in place from their corner (filter bottom-left, view bottom-right)
   and blur everything behind them. In the phone lightbox the project card sits top-left

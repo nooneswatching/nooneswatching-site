@@ -646,6 +646,7 @@
     const card = $('lb-card'), cardHead = $('lb-cardhead'), cardBody = $('lb-cardbody'), toggle = $('lb-toggle');
     const titleEl = $('lb-title'), subEl = $('lb-sub'), descEl = $('lb-desc'), metaEl = $('lb-meta');
     const strip = $('lb-strip'), thumbs = $('lb-thumbs'), countEl = $('lb-count');
+    const scroller = $('lb-scroll'), caseEl = $('lb-case');
     const dim = $('lb-dim');
     let cur = null;      // { id, project, navIds, pos, cardOpen }
     let media = null;    // current .lb__media element
@@ -659,7 +660,7 @@
     // clear the close button may rise to the button's top edge, not only its bottom.
     const fit = (r, aw, ah) => { let w = aw, h = w / r; if (h > ah) { h = ah; w = h * r; } return { w, h }; };
     function sizeMedia(settle = true) {
-      if (!media || !cur) return;
+      if (!media || !cur || cur.mode === 'project') return;
       const a = assets[cur.id], m = a.media;
       const r = m.width / m.height;
       const sw = stage.clientWidth, sh = stage.clientHeight;
@@ -756,8 +757,10 @@
     function render({ fromTile = null, lite = false } = {}) {
       const a = assets[cur.id];
       const p = cur.project ? projectById[cur.project] : null;
+      cur.mode = p ? 'project' : 'single';
       el.classList.toggle('is-single', !p);
       el.classList.toggle('has-strip', !!p);
+      el.classList.toggle('is-project', !!p);
       const newTitle = p ? p.title : a.title;
       if (titleEl.textContent && titleEl.textContent !== newTitle && !reduced) cardHead.querySelector('.lb__cardtext').animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' });
       // card
@@ -794,6 +797,32 @@
       } else { strip.hidden = true; thumbs.innerHTML = ''; delete thumbs.dataset.project; countEl.textContent = ''; }
       if (isOpen() && !el.contains(document.activeElement)) el.focus({ preventScroll: true });
       syncTray();                                               // the bottom row sits on the tray: measure it now, not a frame later
+      // project: the vertical scroll of every asset; a box flies only on open and close
+      if (p) {
+        const wasSingleBox = media && !fromTile;
+        if (media && !fromTile) { [...assetEl.children].forEach((o) => { returnVideo(o); o.remove(); }); media = null; }
+        const fresh = caseEl.dataset.project !== p.id;
+        if (fresh) buildCase(p);
+        scroller.hidden = false;
+        if (fresh && wasSingleBox && !reduced) scroller.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: 'ease' });
+        if (fromTile) {
+          scrollToItem(cur.id, 'auto');
+          const item = itemFor(cur.id);
+          media = buildMedia(a, fromTile);
+          assetEl.appendChild(media);
+          media._rest = itemRect(item);
+          item.classList.add('is-flying');
+          place(media, media._rest);
+          if (!reduced) flipIn(fromTile, () => { item.classList.remove('is-flying'); returnVideo(media); media.remove(); media = null; });
+          else { item.classList.remove('is-flying'); returnVideo(media); media.remove(); media = null; }
+        } else if (fresh || cur.enterAt) {
+          scrollToItem(cur.id, 'auto'); cur.enterAt = null;
+        } else scrollToItem(cur.id, lite ? 'auto' : 'smooth');
+        syncActive(true);
+        document.title = `${p.title} · NO/ONES/WATCHING`;
+        return;
+      }
+      if (!scroller.hidden) { scroller.hidden = true; caseEl.innerHTML = ''; delete caseEl.dataset.project; io && io.disconnect(); }
       // media: the same box stays and morphs to the next piece's shape while the picture
       // crossfades inside it, so moving between pieces reads as one object changing
       if (media && !fromTile) {
@@ -826,6 +855,84 @@
         if (fromTile && !reduced) flipIn(fromTile);
       }
       document.title = `${p ? p.title : a.title} · NO/ONES/WATCHING`;
+    }
+
+    // ---- project scroll ------------------------------------------------------------
+    // Rows like the v1 case pages: a landscape asset takes the full width, portrait and
+    // square ones pair up side by side. Pictures start as thumbnails and upgrade near the
+    // viewport; clips play only while in view.
+    let io = null;
+    function buildCase(p) {
+      caseEl.dataset.project = p.id;
+      const rows = []; let pair = null;
+      for (const id of p.assets) {
+        const m = assets[id].media;
+        if (m.type === 'placeholder') continue;
+        if (m.width / m.height >= 1.2) { if (pair) { rows.push(pair); pair = null; } rows.push({ kind: 'full', ids: [id] }); }
+        else { if (!pair) pair = { kind: 'pair', ids: [] }; pair.ids.push(id); if (pair.ids.length === 2) { rows.push(pair); pair = null; } }
+      }
+      if (pair) rows.push(pair);
+      caseEl.innerHTML = rows.map((r) => `<div class="lb__row lb__row--${r.kind}">${r.ids.map((id) => {
+        const x = assets[id], m = x.media;
+        const body = m.type === 'video'
+          ? `<video poster="${m.thumb}" data-src="${m.src}" muted loop playsinline preload="none"></video>`
+          : `<img src="${m.thumb || m.src}" data-src="${m.src}" alt="${esc(x.title)}" decoding="async">`;
+        return `<figure class="lb__item" data-id="${id}" style="aspect-ratio: ${m.width} / ${m.height}${m.bg ? `; background: ${m.bg}` : ''}">${body}</figure>`;
+      }).join('')}</div>`).join('');
+      scroller.scrollTop = 0;
+      if (io) io.disconnect();
+      io = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          const it = e.target, img = it.querySelector('img'), v = it.querySelector('video');
+          if (e.isIntersecting) {
+            if (img && img.dataset.src && img.src !== location.origin + img.dataset.src) { const hi = new Image(); hi.src = img.dataset.src; (hi.decode ? hi.decode() : Promise.resolve()).then(() => { if (img.isConnected) img.src = img.dataset.src; }).catch(() => {}); }
+            if (v) { if (!v.getAttribute('src')) v.src = v.dataset.src; const pl = v.play(); if (pl && pl.catch) pl.catch(() => {}); }
+          } else if (v && !v.paused) v.pause();
+        }
+      }, { root: scroller, rootMargin: '60% 0px' });
+      caseEl.querySelectorAll('.lb__item').forEach((it) => io.observe(it));
+    }
+    const itemFor = (id) => caseEl.querySelector(`.lb__item[data-id="${id}"]`);
+    // an item's rect in stage coordinates, for the flight box
+    const itemRect = (item) => { const r = item.getBoundingClientRect(), sr = stage.getBoundingClientRect(); return { left: r.left - sr.left, top: r.top - sr.top, width: r.width, height: r.height }; };
+    // the scroll offset that puts an item just under the top chrome
+    const padTop = () => parseFloat(getComputedStyle(caseEl).paddingTop) || 0;
+    function scrollToItem(id, behavior = 'smooth') {
+      const item = itemFor(id); if (!item) return;
+      const top = Math.max(0, item.offsetTop - padTop());
+      cur.scrollLock = id;                                       // the tracker leaves cur.id alone until this scroll lands
+      scroller.scrollTo({ top, behavior: reduced ? 'auto' : behavior });
+      clearTimeout(cur.scrollLockT); cur.scrollLockT = setTimeout(() => { if (cur) cur.scrollLock = null; }, behavior === 'smooth' ? 700 : 60);
+    }
+    // the asset under the focus line (40% down the scroller) is the current one
+    let trackRaf = 0, urlT = 0;
+    function syncActive(force = false) {
+      if (!cur || cur.mode !== 'project') return;
+      const items = [...caseEl.querySelectorAll('.lb__item')]; if (!items.length) return;
+      let id = cur.id;
+      if (!cur.scrollLock && !force) {
+        const sr = scroller.getBoundingClientRect(), line = sr.top + padTop() + (sr.height - padTop()) * .4;
+        let best = null, bd = Infinity;
+        for (const it of items) { const r = it.getBoundingClientRect(); const d = r.top <= line && r.bottom >= line ? 0 : Math.min(Math.abs(r.top - line), Math.abs(r.bottom - line)); if (d < bd) { bd = d; best = it; } }
+        if (best) id = best.dataset.id;
+      }
+      const changed = id !== cur.id;
+      if (changed) { cur.id = id; state.open = { id, project: cur.project }; clearTimeout(urlT); urlT = setTimeout(() => push(true), 200); }
+      const p = projectById[cur.project];
+      for (const t of thumbs.children) { const on = t.dataset.id === id; t.classList.toggle('is-active', on); if (on) t.setAttribute('aria-current', 'true'); else t.removeAttribute('aria-current'); }
+      countEl.textContent = `${p.assets.indexOf(id) + 1} / ${p.assets.length}`;
+      if (changed && !scrub.on && !scrub.hover) { const t = thumbs.querySelector('.is-active'); if (t) t.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: reduced ? 'auto' : 'smooth' }); }
+    }
+    scroller.addEventListener('scroll', () => { if (!trackRaf) trackRaf = requestAnimationFrame(() => { trackRaf = 0; syncActive(); }); }, { passive: true });
+    // a tap or click on the scroller's own background (not on a picture) closes, as on the stage
+    { let dn = null;
+      scroller.addEventListener('pointerdown', (e) => { dn = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId }; });
+      scroller.addEventListener('pointerup', (e) => {
+        if (!dn || e.pointerId !== dn.id) return;
+        const dx = e.clientX - dn.x, dy = e.clientY - dn.y, dt = performance.now() - dn.t; dn = null;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 600 && e.pointerType === 'touch') { step(dx < 0 ? 1 : -1); return; }
+        if (Math.hypot(dx, dy) < 8 && !e.target.closest('.lb__item')) { if (cur?.cardOpen) { if (isPhone()) setCard(false); return; } close(); }
+      });
     }
 
     // One rAF loop moves the canvas zoom and the asset together: each frame the asset is
@@ -880,8 +987,8 @@
       frame(last);
     }
 
-    function flipIn(tile) {
-      zoomFlip(tile, true);
+    function flipIn(tile, done) {
+      zoomFlip(tile, true, done);
       ui.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, delay: 120, easing: 'ease', fill: 'backwards' });
       // the dim ramps in with the zoom so the neighbours are seen flying outward
       el.querySelector('.lb__bg').animate([{ opacity: 0 }, { opacity: 1 }], { duration: 420, easing: 'ease-in' });
@@ -933,7 +1040,7 @@
       render({ fromTile: tile });
       // keyboard users land on the close button; everyone else gets the dialog itself so
       // no focus ring appears, while Esc and the arrows still work
-      if (!wasOpen) (keyboard ? $('lb-close') : el).focus({ preventScroll: true });
+      if (!wasOpen) (keyboard ? $('lb-close') : (cur.mode === 'project' ? scroller : el)).focus({ preventScroll: true });
       wake();
       if (doPush) push(!wasOpen && !tile && !state.open ? true : false);
     }
@@ -949,9 +1056,25 @@
       if (!tile || reduced) canvas.release();
       // a box still fading out from the last switch goes now; only the current one flies back
       [...assetEl.children].forEach((o) => { if (o !== media) { o.getAnimations().forEach((x) => x.cancel()); returnVideo(o); o.remove(); } });
+      // project: the asset in view becomes the box that flies back to its tile
+      let flyingItem = null;
+      if (cur.mode === 'project' && tile && !reduced) {
+        const item = itemFor(id);
+        if (item) {
+          const a = assets[id];
+          media = buildMedia(a, null, true);
+          const img = media.querySelector('img'), src = item.querySelector('img');
+          if (img && src && src.src) img.src = src.src;        // the same pixels the item shows
+          assetEl.appendChild(media);
+          media._rest = itemRect(item); place(media, media._rest);
+          item.classList.add('is-flying'); flyingItem = item;
+        }
+      }
       const finish = () => {
         el.hidden = true;
         [...assetEl.children].forEach((o) => { returnVideo(o); o.remove(); }); media = null;
+        if (flyingItem) flyingItem.classList.remove('is-flying');
+        scroller.hidden = true; caseEl.innerHTML = ''; delete caseEl.dataset.project; if (io) io.disconnect();
         canvas.showTiles();                                     // the box is gone: the tile takes over in the same frame
         [ui, el.querySelector('.lb__bg')].forEach((x) => x.getAnimations().forEach((a) => a.cancel()));
         if (state.view === 'grid') canvas.resume(); else if (lenis) lenis.start();
@@ -975,10 +1098,7 @@
     function step(dir) {
       if (!cur) return;
       const p = cur.project ? projectById[cur.project] : null;
-      if (p) {
-        const j = p.assets.indexOf(cur.id) + dir;
-        if (j >= 0 && j < p.assets.length) { jump(p.assets[j]); wake(); return; }
-      }
+      // a project scrolls vertically; left/right move on to the next piece or project
       const list = navList();
       if (!list.length) return;
       let pos = cur.pos, guard = 0;
@@ -987,7 +1107,7 @@
       let id = list[pos];
       const project = a.inProject ? a.projectId : null;
       if (project) { const np = projectById[project]; id = dir > 0 ? np.assets[0] : np.assets[np.assets.length - 1]; }
-      cur.pos = pos; cur.id = id; cur.project = project;
+      cur.pos = pos; cur.id = id; cur.project = project; cur.enterAt = project ? (dir > 0 ? 'top' : 'bottom') : null;
       state.open = { id, project };
       render();
       push(true);
@@ -1134,6 +1254,7 @@
       if (e.key === 'Escape') { e.preventDefault(); if (cur?.cardOpen) setCard(false); else close(); }
       else if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
       else if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+      else if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && cur?.mode === 'project' && document.activeElement !== scroller) { e.preventDefault(); scroller.scrollBy({ top: e.key === 'ArrowDown' ? 120 : -120, behavior: reduced ? 'auto' : 'smooth' }); }
       else if (e.key === 'Tab') {
         const f = [...el.querySelectorAll('button:not([hidden]), a[href]')].filter((x) => x.offsetParent !== null && !x.closest('[hidden]'));
         if (!f.length) return;
