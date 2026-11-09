@@ -526,13 +526,15 @@
       const { ox, oy, s } = this.zoom;
       return { left: ox + (r.left - ox) / s, top: oy + (r.top - oy) / s, width: r.width / s, height: r.height / s };
     }
-    tileFor(id) {
-      // the on-screen tile closest to the centre for this asset (for FLIP)
+    tileFor(id, { visible = false } = {}) {
+      // the tile closest to the centre for this asset (for FLIP); visible: its centre must be on screen
       let best = null, bd = Infinity;
       for (const el of this.tiles.values()) {
         if (el.dataset.id !== id) continue;
         const r = el.getBoundingClientRect();
-        const d = Math.hypot(r.left + r.width / 2 - this.vw / 2, r.top + r.height / 2 - this.vh / 2);
+        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        if (visible && (cx < 0 || cy < 0 || cx > this.vw || cy > this.vh)) continue;
+        const d = Math.hypot(cx - this.vw / 2, cy - this.vh / 2);
         if (d < bd) { bd = d; best = el; }
       }
       return best;
@@ -825,6 +827,7 @@
         if (old) { returnVideo(old); old.remove(); }
         if (fromTile && !reduced) flipIn(fromTile);
       }
+      if (cur.originId && cur.id !== cur.originId && canvas.hiddenId) canvas.showTiles();   // nothing sits blank behind the blur while browsing
       document.title = `${p ? p.title : a.title} · NO/ONES/WATCHING`;
     }
 
@@ -911,7 +914,7 @@
       let pos = list.indexOf(id);
       const projId = project !== undefined ? project : (a.inProject ? a.projectId : null);
       if (pos < 0 && projId) { pos = list.findIndex((x) => assets[x].projectId === projId); }
-      cur = { id, project: projId, pos: Math.max(0, pos), cardOpen: cur?.cardOpen || false };
+      cur = { id, project: projId, pos: Math.max(0, pos), cardOpen: cur?.cardOpen || false, originId: isOpen() ? cur?.originId : (tile ? id : null) };
       state.open = { id, project: projId };
       const wasOpen = isOpen();
       if (!wasOpen) {
@@ -945,7 +948,14 @@
       el.classList.remove('is-idle', 'is-card-open');
       state.open = null;
       body.classList.remove('lb-open');
-      const tile = state.view === 'grid' ? canvas.tileFor(id) : null;
+      // Landing: the current asset's tile if it is on screen; otherwise the tile the lightbox
+      // opened from, the box crossfading to that tile's thumbnail on the way down.
+      let tile = null, foldBack = false;
+      if (state.view === 'grid') {
+        tile = canvas.tileFor(id, { visible: true });
+        if (!tile && cur.originId && cur.originId !== id) { tile = canvas.tileFor(cur.originId, { visible: true }); foldBack = !!tile; }
+      }
+      if (tile) { canvas.clearHover(); canvas.hideTile(tile.dataset.id); }   // the box stands in for it during the flight
       if (!tile || reduced) canvas.release();
       // a box still fading out from the last switch goes now; only the current one flies back
       [...assetEl.children].forEach((o) => { if (o !== media) { o.getAnimations().forEach((x) => x.cancel()); returnVideo(o); o.remove(); } });
@@ -958,6 +968,13 @@
         if (lastFocus && lastFocus.isConnected) lastFocus.focus({ preventScroll: true }); else $('canvas').focus({ preventScroll: true });
       };
       if (tile && !reduced && media) {
+        if (foldBack) {
+          // the origin's thumbnail fades in over the current picture as the box shrinks home
+          const o = assets[cur.originId].media;
+          const back = document.createElement('img'); back.className = 'lb__fold'; back.alt = ''; back.decoding = 'sync'; back.src = o.thumb || o.src;
+          media.appendChild(back);
+          back.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: 'ease-in', fill: 'forwards' });
+        }
         ui.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: 'forwards' });
         el.querySelector('.lb__bg').animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' });
         zoomFlip(tile, false, finish);

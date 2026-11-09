@@ -360,6 +360,7 @@ body:not([data-view="grid"]) .dock { opacity: 0; pointer-events: none; }
    scale the crop morphs from the tile's framing to the full frame. */
 .lb__media { position: absolute; left: 0; top: 0; border-radius: var(--r-lb); overflow: hidden; }
 .lb__media > img, .lb__media > video, .lb__media > .lb__layer { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.lb__media > .lb__fold { object-fit: cover; z-index: 1; }   /* the origin thumbnail, fading in on a fold-back close */
 .lb__layer > img, .lb__layer > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: inherit; }
 .lb__layer > .lb__hi { opacity: 0; transition: opacity .25s ease; }   /* the master, over the adopted proxy or thumbnail */
 .lb__layer.is-ready > .lb__hi { opacity: 1; }
